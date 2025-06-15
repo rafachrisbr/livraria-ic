@@ -8,26 +8,6 @@ export const ActionCards = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 gap-6 mb-8">
 
-      {/* NOVO CARD: Inventário com acesso fácil */}
-      <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 order-2 lg:order-3">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-yellow-800">
-            <Warehouse className="h-5 w-5" />
-            <span>Estoque</span>
-          </CardTitle>
-          <CardDescription className="text-yellow-600">
-            Consulte e controle os produtos em estoque
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link to="/inventory">
-            <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold">
-              Ver Inventário
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
-
       {/* CARD PRINCIPAL: Vendas -> DESTAQUE */}
       <Card className="bg-gradient-to-br from-green-100 via-green-200 to-green-50 border-green-300 shadow-lg ring-2 ring-green-500/70 order-1">
         <CardHeader>
@@ -49,8 +29,29 @@ export const ActionCards = () => {
         </CardContent>
       </Card>
 
+      {/* CONTROLE DE ESTOQUE - SEGUNDO EM DESTAQUE */}
+      <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-md ring-1 ring-orange-300/50 order-2">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-orange-800">
+            <Warehouse className="h-5 w-5" />
+            <span>Controle de Estoque</span>
+          </CardTitle>
+          <CardDescription className="text-orange-600">
+            Monitore e gerencie todo o estoque
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link to="/inventory">
+            <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2.5">
+              <Warehouse className="h-4 w-4 mr-2" />
+              Ver Estoque
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
       {/* PRODUTOS */}
-      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 order-3 lg:order-1">
+      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 order-3">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-blue-800">
             <Package className="h-5 w-5" />
@@ -112,19 +113,19 @@ export const ActionCards = () => {
       </Card>
 
       {/* AUDITORIA */}
-      <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 order-6">
+      <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 order-6">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-orange-800">
+          <CardTitle className="flex items-center space-x-2 text-gray-800">
             <Shield className="h-5 w-5" />
             <span>Auditoria</span>
           </CardTitle>
-          <CardDescription className="text-orange-600">
+          <CardDescription className="text-gray-600">
             Controle e logs do sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Link to="/audit">
-            <Button className="w-full bg-orange-600 hover:bg-orange-700">
+            <Button className="w-full bg-gray-600 hover:bg-gray-700">
               Ver Auditoria
             </Button>
           </Link>
