@@ -2,6 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Package, ShoppingCart, BarChart3 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export const ActionCards = () => {
   return (
@@ -21,9 +22,11 @@ export const ActionCards = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg">
-            Acessar Produtos
-          </Button>
+          <Link to="/products">
+            <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg">
+              Acessar Produtos
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
@@ -42,9 +45,11 @@ export const ActionCards = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <Button className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg">
-            Nova Venda
-          </Button>
+          <Link to="/sales">
+            <Button className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg">
+              Nova Venda
+            </Button>
+          </Link>
         </CardContent>
       </Card>
 
@@ -63,9 +68,11 @@ export const ActionCards = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-lg">
-            Ver Relatórios
-          </Button>
+          <Link to="/reports">
+            <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-lg">
+              Ver Relatórios
+            </Button>
+          </Link>
         </CardContent>
       </Card>
     </div>
