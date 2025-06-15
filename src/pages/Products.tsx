@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { AddProductDialog } from '@/components/products/AddProductDialog';
 import { EditProductDialog } from '@/components/products/EditProductDialog';
 import { DeleteProductDialog } from '@/components/products/DeleteProductDialog';
+import { AddCategoryDialog } from '@/components/categories/AddCategoryDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -96,6 +96,12 @@ const Products = () => {
     console.log('Produto excluído com sucesso!');
   };
 
+  const handleCategoryAdded = () => {
+    // Recarregar produtos para atualizar as categorias disponíveis
+    fetchProducts();
+    console.log('Categoria adicionada com sucesso!');
+  };
+
   const getStockBadge = (current: number, minimum: number) => {
     if (current === 0) {
       return <Badge variant="destructive">Sem Estoque</Badge>;
@@ -119,7 +125,10 @@ const Products = () => {
 
         <main className="px-4 py-6">
           <div className="flex flex-col space-y-4 mb-6">
-            <AddProductDialog onProductAdded={handleProductAdded} />
+            <div className="flex space-x-3">
+              <AddProductDialog onProductAdded={handleProductAdded} />
+              <AddCategoryDialog onCategoryAdded={handleCategoryAdded} />
+            </div>
             <Link to="/inventory">
               <Button variant="outline" className="w-full">
                 <Package className="h-4 w-4 mr-2" />
@@ -260,7 +269,10 @@ const Products = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-6">
-          <AddProductDialog onProductAdded={handleProductAdded} />
+          <div className="flex space-x-3">
+            <AddProductDialog onProductAdded={handleProductAdded} />
+            <AddCategoryDialog onCategoryAdded={handleCategoryAdded} />
+          </div>
           <Link to="/inventory">
             <Button variant="outline">
               <Package className="h-4 w-4 mr-2" />
