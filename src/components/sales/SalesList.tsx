@@ -16,7 +16,6 @@ interface Sale {
   payment_method: string;
   sale_date: string;
   notes: string | null;
-  status: string;
   products: {
     name: string;
     product_code: string;
@@ -49,7 +48,6 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
           payment_method,
           sale_date,
           notes,
-          status,
           products:product_id (
             name,
             product_code
@@ -68,31 +66,6 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const cancelSale = async (saleId: string) => {
-    try {
-      const { error } = await supabase
-        .from('sales')
-        .update({ status: 'cancelada' })
-        .eq('id', saleId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Sucesso',
-        description: 'Venda cancelada com sucesso. Estoque restaurado.'
-      });
-
-      fetchSales();
-    } catch (error) {
-      console.error('Error canceling sale:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao cancelar venda',
-        variant: 'destructive'
-      });
     }
   };
 
@@ -155,11 +128,8 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
                         {sale.products.product_code}
                       </span>
                       <span className="font-medium">{sale.products.name}</span>
-                      <Badge 
-                        variant={sale.status === 'ativa' ? 'default' : 'destructive'}
-                        className="text-xs"
-                      >
-                        {sale.status === 'ativa' ? 'Ativa' : 'Cancelada'}
+                      <Badge variant="default" className="text-xs">
+                        Ativa
                       </Badge>
                     </div>
                     
@@ -189,33 +159,6 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
                     <div className="text-lg font-bold text-slate-800">
                       R$ {sale.total_price.toFixed(2)}
                     </div>
-                    {sale.status === 'ativa' && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="mt-2 text-red-600 hover:text-red-700">
-                            <X className="h-3 w-3 mr-1" />
-                            Cancelar
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Cancelar Venda</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Tem certeza que deseja cancelar esta venda? O estoque será automaticamente restaurado.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Não</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => cancelSale(sale.id)}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Sim, Cancelar
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
                   </div>
                 </div>
               </div>

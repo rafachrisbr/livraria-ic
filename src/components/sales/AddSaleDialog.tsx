@@ -116,8 +116,7 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
           total_price: totalPrice,
           payment_method: values.payment_method,
           sale_date: values.sale_date,
-          notes: values.notes || null,
-          status: 'ativa'
+          notes: values.notes || null
         });
 
       if (saleError) throw saleError;

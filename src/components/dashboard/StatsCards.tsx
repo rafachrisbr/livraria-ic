@@ -36,12 +36,13 @@ export const StatsCards = () => {
 
       // Buscar vendas de hoje
       const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
       const { data: todaySales, error: salesError } = await supabase
         .from('sales')
         .select('total_price')
-        .eq('status', 'ativa')
         .gte('sale_date', today)
-        .lt('sale_date', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+        .lt('sale_date', tomorrow);
 
       if (salesError) throw salesError;
 

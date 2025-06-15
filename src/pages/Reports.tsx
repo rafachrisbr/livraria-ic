@@ -13,8 +13,6 @@ interface ReportData {
   averageTicket: number;
   stockValue: number;
   lowStockCount: number;
-  cancelledSales: number;
-  cancelledRevenue: number;
   totalProducts: number;
 }
 
@@ -26,8 +24,6 @@ const Reports = () => {
     averageTicket: 0,
     stockValue: 0,
     lowStockCount: 0,
-    cancelledSales: 0,
-    cancelledRevenue: 0,
     totalProducts: 0
   });
   const [loading, setLoading] = useState(true);
@@ -50,7 +46,7 @@ const Reports = () => {
       // Buscar dados das vendas
       const { data: sales, error: salesError } = await supabase
         .from('sales')
-        .select('total_price, status');
+        .select('total_price');
 
       if (salesError) throw salesError;
 
@@ -60,15 +56,9 @@ const Reports = () => {
       const lowStockCount = products?.filter(p => p.stock_quantity <= p.minimum_stock).length || 0;
 
       // Calcular métricas das vendas
-      const activeSales = sales?.filter(s => s.status === 'ativa') || [];
-      const cancelledSales = sales?.filter(s => s.status === 'cancelada') || [];
-      
-      const totalSales = activeSales.length;
-      const totalRevenue = activeSales.reduce((sum, s) => sum + s.total_price, 0);
+      const totalSales = sales?.length || 0;
+      const totalRevenue = sales?.reduce((sum, s) => sum + s.total_price, 0) || 0;
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
-      
-      const cancelledSalesCount = cancelledSales.length;
-      const cancelledRevenue = cancelledSales.reduce((sum, s) => sum + s.total_price, 0);
 
       setReportData({
         totalSales,
@@ -76,8 +66,6 @@ const Reports = () => {
         averageTicket,
         stockValue,
         lowStockCount,
-        cancelledSales: cancelledSalesCount,
-        cancelledRevenue,
         totalProducts
       });
     } catch (error) {
@@ -133,7 +121,7 @@ const Reports = () => {
                     <div>
                       <CardTitle className="text-slate-800 text-lg">Vendas Totais</CardTitle>
                       <CardDescription className="text-sm">
-                        Receita total (vendas ativas)
+                        Receita total
                       </CardDescription>
                     </div>
                   </div>
@@ -221,58 +209,6 @@ const Reports = () => {
               </Card>
             </div>
 
-            {reportData.cancelledSales > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <Card className="bg-white border-red-200 shadow-sm">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-red-100 rounded-lg">
-                        <X className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-slate-800 text-lg">Vendas Canceladas</CardTitle>
-                        <CardDescription className="text-sm">
-                          Total de vendas canceladas
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
-                      {reportData.cancelledSales}
-                    </div>
-                    <p className="text-sm text-slate-500">
-                      Vendas canceladas no período
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white border-red-200 shadow-sm">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-red-100 rounded-lg">
-                        <DollarSign className="h-5 w-5 text-red-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-slate-800 text-lg">Valor Cancelado</CardTitle>
-                        <CardDescription className="text-sm">
-                          Receita perdida com cancelamentos
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600">
-                      R$ {reportData.cancelledRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                    <p className="text-sm text-slate-500">
-                      Valor total cancelado
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
             <Card className="bg-white border-slate-200 shadow-sm">
               <CardHeader>
                 <div className="flex items-center space-x-3">
@@ -294,16 +230,12 @@ const Reports = () => {
                     <p className="text-2xl font-bold text-slate-900">{reportData.totalProducts}</p>
                   </div>
                   <div className="text-center p-4 bg-slate-50 rounded-lg">
-                    <h4 className="font-semibold text-slate-800 mb-2">Vendas Ativas</h4>
+                    <h4 className="font-semibold text-slate-800 mb-2">Vendas Realizadas</h4>
                     <p className="text-2xl font-bold text-green-600">{reportData.totalSales}</p>
                   </div>
                   <div className="text-center p-4 bg-slate-50 rounded-lg">
-                    <h4 className="font-semibold text-slate-800 mb-2">Taxa de Cancelamento</h4>
-                    <p className="text-2xl font-bold text-orange-600">
-                      {reportData.totalSales + reportData.cancelledSales > 0 
-                        ? ((reportData.cancelledSales / (reportData.totalSales + reportData.cancelledSales)) * 100).toFixed(1)
-                        : 0}%
-                    </p>
+                    <h4 className="font-semibold text-slate-800 mb-2">Produtos em Estoque</h4>
+                    <p className="text-2xl font-bold text-blue-600">{reportData.totalProducts}</p>
                   </div>
                 </div>
               </CardContent>
