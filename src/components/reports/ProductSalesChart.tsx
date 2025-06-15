@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 import { Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -143,12 +144,11 @@ export const ProductSalesChart = () => {
                 />
                 <Bar 
                   dataKey="quantity" 
-                  // Aqui cada barra receberá sua cor correspondente
                   radius={[4, 4, 0, 0]}
                   isAnimationActive={true}
                 >
                   {data.map((entry, index) => (
-                    <cell key={`cell-${index}`} fill={entry.fill || COLORS[0]} />
+                    <Cell key={`cell-${index}`} fill={entry.fill || COLORS[0]} />
                   ))}
                 </Bar>
               </BarChart>
