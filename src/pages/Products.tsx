@@ -11,6 +11,7 @@ import { EditProductDialog } from '@/components/products/EditProductDialog';
 import { DeleteProductDialog } from '@/components/products/DeleteProductDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useMobile } from '@/hooks/use-mobile';
 
 interface Product {
   id: string;
@@ -32,6 +33,7 @@ const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { isMobile } = useMobile();
 
   const handleLogout = async () => {
     await signOut();
@@ -103,6 +105,129 @@ const Products = () => {
       return <Badge variant="default">Normal</Badge>;
     }
   };
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <MobileHeader 
+          title="Produtos" 
+          subtitle="Gerenciar produtos"
+          showBackButton
+        />
+
+        <main className="px-4 py-6">
+          <div className="flex flex-col space-y-4 mb-6">
+            <AddProductDialog onProductAdded={handleProductAdded} />
+            <Link to="/inventory">
+              <Button variant="outline" className="w-full">
+                <Package className="h-4 w-4 mr-2" />
+                Controle de Estoque
+              </Button>
+            </Link>
+          </div>
+
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader>
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-slate-100 rounded-xl">
+                  <Package className="h-6 w-6 text-slate-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-slate-800">Lista de Produtos</CardTitle>
+                  <CardDescription>
+                    Gerencie livros e artigos religiosos
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-8">Carregando produtos...</div>
+              ) : products.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                    <Package className="h-8 w-8 text-slate-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Nenhum produto cadastrado
+                  </h3>
+                  <p className="text-gray-500 max-w-sm mx-auto mb-4">
+                    Comece adicionando livros e artigos religiosos ao seu estoque
+                  </p>
+                  <AddProductDialog 
+                    onProductAdded={handleProductAdded}
+                    trigger={
+                      <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar Primeiro Produto
+                      </Button>
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {products.map((product) => (
+                    <div key={product.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start space-x-3">
+                        {product.image_url && (
+                          <img 
+                            src={product.image_url} 
+                            alt={product.name}
+                            className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
+                          <p className="text-sm text-gray-500">{product.categories?.name}</p>
+                          {product.description && (
+                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                              {product.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-lg font-semibold text-gray-900">
+                            R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-600">
+                              {product.stock_quantity} unidades
+                            </span>
+                            {getStockBadge(product.stock_quantity, product.minimum_stock)}
+                          </div>
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                          <EditProductDialog 
+                            product={product} 
+                            onProductUpdated={handleProductUpdated}
+                          />
+                          <DeleteProductDialog 
+                            productId={product.id}
+                            productName={product.name}
+                            onProductDeleted={handleProductDeleted}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="pt-2 border-t">
+                        <span className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                          {product.product_code}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

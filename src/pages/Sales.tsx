@@ -6,10 +6,13 @@ import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AddSaleDialog } from '@/components/sales/AddSaleDialog';
 import { SalesList } from '@/components/sales/SalesList';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { useMobile } from '@/hooks/useMobile';
 
 const Sales = () => {
   const { user, signOut } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { isMobile } = useMobile();
 
   const handleLogout = async () => {
     await signOut();
@@ -18,6 +21,26 @@ const Sales = () => {
   const handleSaleAdded = () => {
     setRefreshTrigger(prev => prev + 1);
   };
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <MobileHeader 
+          title="Vendas" 
+          subtitle="Registrar vendas"
+          showBackButton
+        />
+
+        <main className="px-4 py-6">
+          <div className="mb-6">
+            <AddSaleDialog onSaleAdded={handleSaleAdded} />
+          </div>
+
+          <SalesList refreshTrigger={refreshTrigger} />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

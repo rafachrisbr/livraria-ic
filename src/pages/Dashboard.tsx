@@ -9,9 +9,12 @@ import { StatsCards } from '@/components/dashboard/StatsCards';
 import { ActionCards } from '@/components/dashboard/ActionCards';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { ProductsList } from '@/components/dashboard/ProductsList';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { useMobile } from '@/hooks/useMobile';
 
 const Dashboard = () => {
   const { user, signOut, isAdmin } = useAuth();
+  const { isMobile } = useMobile();
 
   const handleLogout = async () => {
     await signOut();
@@ -33,6 +36,27 @@ const Dashboard = () => {
             </Button>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <MobileHeader 
+          title="Dashboard" 
+          subtitle="Livraria Imaculada Conceição" 
+        />
+        
+        <main className="px-4 py-6 space-y-6">
+          <WelcomeSection userEmail={user?.email} />
+          <StatsCards />
+          <ActionCards />
+          <div className="space-y-6">
+            <ProductsList />
+            <RecentActivity />
+          </div>
+        </main>
       </div>
     );
   }
