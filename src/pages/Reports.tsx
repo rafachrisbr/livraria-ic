@@ -1,9 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, DollarSign, Calendar, AlertTriangle, ShoppingCart, Download } from 'lucide-react';
+import { ArrowLeft, DollarSign, Calendar, AlertTriangle, ShoppingCart, Download, Percent } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { ProductSalesChart } from '@/components/reports/ProductSalesChart';
@@ -20,6 +19,19 @@ interface ReportData {
   totalProducts: number;
 }
 
+interface PromotionReport {
+  sale_id: string;
+  product_name: string;
+  promotion_name: string;
+  discount_type: string;
+  discount_value: number;
+  unit_price: number;
+  promotion_price: number;
+  sale_date: string;
+  quantity: number;
+  total_saved: number;
+}
+
 const Reports = () => {
   const { user, signOut } = useAuth();
   const [reportData, setReportData] = useState<ReportData>({
@@ -30,6 +42,7 @@ const Reports = () => {
     lowStockCount: 0,
     totalProducts: 0
   });
+  const [promotionSales, setPromotionSales] = useState<PromotionReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const { exportReportsToExcel } = useExcelExport();
@@ -37,6 +50,7 @@ const Reports = () => {
 
   useEffect(() => {
     fetchReportData();
+    fetchPromotionSales();
   }, []);
 
   const fetchReportData = async () => {
@@ -79,6 +93,55 @@ const Reports = () => {
       console.error('Error fetching report data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPromotionSales = async () => {
+    /*
+      Para cada venda com promotion_id preenchido, buscar nome da promoção + produto, valor do desconto, e calcular preço promocional/aplicado
+    */
+    try {
+      const { data, error } = await supabase
+        .from("sales")
+        .select(
+          `
+            id, quantity, unit_price, total_price, sale_date, promotion_id,
+            product:products(id, name),
+            promotion:promotions(id, name, discount_type, discount_value)
+          `
+        )
+        .neq("promotion_id", null)
+        .order("sale_date", { ascending: false });
+
+      if (error) throw error;
+
+      const mapped: PromotionReport[] = (data || []).map((sale: any) => {
+        // Calcular o valor promocional correto, se possível:
+        let pricePromo = sale.unit_price;
+        if (sale.promotion?.discount_type === "percentage") {
+          pricePromo = sale.unit_price * (1 - (sale.promotion.discount_value / 100));
+        } else if (sale.promotion?.discount_type === "fixed_amount") {
+          pricePromo = Math.max(0, sale.unit_price - sale.promotion.discount_value);
+        }
+        const total_saved = (sale.unit_price - pricePromo) * sale.quantity;
+
+        return {
+          sale_id: sale.id,
+          product_name: sale.product?.name,
+          promotion_name: sale.promotion?.name,
+          discount_type: sale.promotion?.discount_type,
+          discount_value: sale.promotion?.discount_value,
+          unit_price: sale.unit_price,
+          promotion_price: pricePromo,
+          sale_date: sale.sale_date,
+          quantity: sale.quantity,
+          total_saved,
+        };
+      });
+
+      setPromotionSales(mapped);
+    } catch (err: any) {
+      toast({ title: "Erro ao buscar vendas promocionais", description: err.message, variant: "destructive" });
     }
   };
 
@@ -281,6 +344,65 @@ const Reports = () => {
                     <p className="text-2xl font-bold text-blue-600">{reportData.totalProducts}</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Relatório de Vendas Promocionais */}
+            <Card className="bg-white border-slate-200 shadow-sm mt-8">
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className="p-3 bg-green-100 rounded-xl">
+                    <Percent className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-slate-800">Relatório de Vendas Promocionais</CardTitle>
+                    <CardDescription>
+                      Detalhe das vendas realizadas com descontos promocionais.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {promotionSales.length === 0 ? (
+                  <div className="text-center py-6 text-slate-500">
+                    Nenhuma venda promocional registrada até agora.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border text-xs lg:text-sm">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700">
+                          <th className="px-2 py-2 text-left">Data</th>
+                          <th className="px-2 py-2 text-left">Produto</th>
+                          <th className="px-2 py-2 text-left">Promoção</th>
+                          <th className="px-2 py-2 text-left">Preço Original</th>
+                          <th className="px-2 py-2 text-left">Preço Promo</th>
+                          <th className="px-2 py-2 text-left">Qtd</th>
+                          <th className="px-2 py-2 text-left">Total Economizado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {promotionSales.map((item) => (
+                          <tr key={item.sale_id} className="border-b">
+                            <td className="px-2 py-2">{new Date(item.sale_date).toLocaleDateString('pt-BR')}</td>
+                            <td className="px-2 py-2">{item.product_name}</td>
+                            <td className="px-2 py-2">{item.promotion_name}</td>
+                            <td className="px-2 py-2">R$ {item.unit_price.toFixed(2)}</td>
+                            <td className="px-2 py-2">R$ {item.promotion_price.toFixed(2)}</td>
+                            <td className="px-2 py-2">{item.quantity}</td>
+                            <td className="px-2 py-2 text-green-700 font-medium">
+                              R$ {item.total_saved.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="mt-3 text-right text-sm">
+                      <b>Total economizado:</b>{" "}
+                      R$ {promotionSales.reduce((acc, p) => acc + p.total_saved, 0).toFixed(2)}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </>

@@ -87,6 +87,36 @@ export type Database = {
         }
         Relationships: []
       }
+      product_promotions: {
+        Row: {
+          product_id: string
+          promotion_id: string
+        }
+        Insert: {
+          product_id: string
+          promotion_id: string
+        }
+        Update: {
+          product_id?: string
+          promotion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_promotions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_promotions_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category_id: string
@@ -137,6 +167,45 @@ export type Database = {
           },
         ]
       }
+      promotions: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          end_date: string
+          id: string
+          is_active: boolean
+          name: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          end_date: string
+          id?: string
+          is_active?: boolean
+          name: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales: {
         Row: {
           administrator_id: string
@@ -145,6 +214,7 @@ export type Database = {
           notes: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
+          promotion_id: string | null
           quantity: number
           sale_date: string
           total_price: number
@@ -157,6 +227,7 @@ export type Database = {
           notes?: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
+          promotion_id?: string | null
           quantity: number
           sale_date?: string
           total_price: number
@@ -169,6 +240,7 @@ export type Database = {
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           product_id?: string
+          promotion_id?: string | null
           quantity?: number
           sale_date?: string
           total_price?: number
@@ -187,6 +259,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
             referencedColumns: ["id"]
           },
         ]
