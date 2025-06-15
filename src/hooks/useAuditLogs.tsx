@@ -76,8 +76,7 @@ export const useAuditLogs = () => {
         .from("audit_logs")
         .select(`
           id, action_type, table_name, record_id, details, created_at, user_id,
-          ip_address, user_agent, old_values, new_values,
-          administrators!inner(name, email)
+          ip_address, user_agent, old_values, new_values
         `, { count: 'exact' });
 
       // Aplicar filtros
@@ -117,16 +116,26 @@ export const useAuditLogs = () => {
 
       if (error) throw error;
 
-      // Mapear os logs com os dados dos administradores vindos do JOIN
-      const logsWithAdmins: AuditLog[] = (logs || []).map((log) => ({
-        ...log,
-        ip_address: log.ip_address as string | null,
-        user_agent: log.user_agent as string | null,
-        administrator: log.administrators ? {
-          name: log.administrators.name,
-          email: log.administrators.email
-        } : null,
-      }));
+      // Buscar informações dos administradores separadamente
+      const { data: admins, error: adminsError } = await supabase
+        .from("administrators")
+        .select("user_id, name, email");
+
+      if (adminsError) throw adminsError;
+
+      // Associar administradores aos logs
+      const logsWithAdmins: AuditLog[] = (logs || []).map((log) => {
+        const admin = (admins || []).find(a => a.user_id === log.user_id);
+        return {
+          ...log,
+          ip_address: log.ip_address as string | null,
+          user_agent: log.user_agent as string | null,
+          administrator: admin ? {
+            name: admin.name,
+            email: admin.email
+          } : null,
+        };
+      });
 
       setAuditLogs(logsWithAdmins);
       setTotalPages(Math.ceil((count || 0) / itemsPerPage));
@@ -179,7 +188,7 @@ export const useAuditLogs = () => {
   }, []);
 
   useEffect(() => {
-    // Carregar logs diretamente, não precisa esperar administrators
+    // Carregar logs diretamente
     fetchAuditLogs(1);
   }, []);
 
