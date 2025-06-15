@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -116,9 +115,11 @@ export const useAuditLogs = () => {
 
       if (error) throw error;
 
-      // Associar administradores aos logs
-      const logsWithAdmins = (logs || []).map((log) => ({
+      // Associar administradores aos logs e corrigir tipos
+      const logsWithAdmins: AuditLog[] = (logs || []).map((log) => ({
         ...log,
+        ip_address: log.ip_address as string | null,
+        user_agent: log.user_agent as string | null,
         administrator: administrators.find((admin) => admin.user_id === log.user_id) || null,
       }));
 
