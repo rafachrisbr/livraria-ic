@@ -1,12 +1,12 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, ShoppingCart, BarChart3 } from 'lucide-react';
+import { Package, ShoppingCart, BarChart3, Warehouse } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const ActionCards = () => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
       <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer bg-white border-slate-200">
         <CardHeader className="pb-4">
           <div className="flex items-center space-x-3">
@@ -25,6 +25,29 @@ export const ActionCards = () => {
           <Link to="/products">
             <Button className="w-full bg-slate-800 hover:bg-slate-900 text-white">
               Acessar Produtos
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer bg-white border-slate-200">
+        <CardHeader className="pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-3 bg-slate-100 rounded-xl group-hover:bg-slate-200 transition-all">
+              <Warehouse className="h-6 w-6 text-slate-600" />
+            </div>
+            <div>
+              <CardTitle className="text-slate-800">Controle de Estoque</CardTitle>
+              <CardDescription className="text-sm">
+                Monitore níveis de estoque e produtos em falta
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Link to="/inventory">
+            <Button className="w-full bg-slate-800 hover:bg-slate-900 text-white">
+              Ver Estoque
             </Button>
           </Link>
         </CardContent>

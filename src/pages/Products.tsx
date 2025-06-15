@@ -1,21 +1,95 @@
 
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Plus } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Package, Plus, Edit, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AddProductDialog } from '@/components/products/AddProductDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  stock_quantity: number;
+  minimum_stock: number;
+  image_url: string | null;
+  category_id: string;
+  categories: {
+    name: string;
+  };
+}
 
 const Products = () => {
   const { user, signOut } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const handleLogout = async () => {
     await signOut();
   };
 
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          categories:category_id (
+            name
+          )
+        `)
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching products:', error);
+        toast({
+          title: 'Erro',
+          description: 'Erro ao carregar produtos.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro inesperado ao carregar produtos.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleProductAdded = () => {
-    // Aqui você pode adicionar lógica para atualizar a lista de produtos
+    fetchProducts();
     console.log('Produto adicionado com sucesso!');
+  };
+
+  const getStockBadge = (current: number, minimum: number) => {
+    if (current === 0) {
+      return <Badge variant="destructive">Sem Estoque</Badge>;
+    } else if (current <= minimum) {
+      return <Badge variant="destructive">Estoque Baixo</Badge>;
+    } else if (current <= minimum * 2) {
+      return <Badge variant="secondary">Atenção</Badge>;
+    } else {
+      return <Badge variant="default">Normal</Badge>;
+    }
   };
 
   return (
@@ -46,8 +120,14 @@ const Products = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
+        <div className="flex justify-between items-center mb-6">
           <AddProductDialog onProductAdded={handleProductAdded} />
+          <Link to="/inventory">
+            <Button variant="outline">
+              <Package className="h-4 w-4 mr-2" />
+              Controle de Estoque
+            </Button>
+          </Link>
         </div>
 
         <Card className="bg-white border-slate-200 shadow-sm">
@@ -65,26 +145,101 @@ const Products = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-12">
-              <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <Package className="h-8 w-8 text-slate-500" />
+            {loading ? (
+              <div className="text-center py-8">Carregando produtos...</div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                  <Package className="h-8 w-8 text-slate-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Nenhum produto cadastrado
+                </h3>
+                <p className="text-gray-500 max-w-sm mx-auto mb-4">
+                  Comece adicionando livros e artigos religiosos ao seu estoque
+                </p>
+                <AddProductDialog 
+                  onProductAdded={handleProductAdded}
+                  trigger={
+                    <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Primeiro Produto
+                    </Button>
+                  }
+                />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Nenhum produto cadastrado
-              </h3>
-              <p className="text-gray-500 max-w-sm mx-auto mb-4">
-                Comece adicionando livros e artigos religiosos ao seu estoque
-              </p>
-              <AddProductDialog 
-                onProductAdded={handleProductAdded}
-                trigger={
-                  <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Primeiro Produto
-                  </Button>
-                }
-              />
-            </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Preço</TableHead>
+                      <TableHead>Estoque</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {products.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell>
+                          <div className="flex items-center space-x-3">
+                            {product.image_url && (
+                              <img 
+                                src={product.image_url} 
+                                alt={product.name}
+                                className="w-10 h-10 rounded-lg object-cover"
+                              />
+                            )}
+                            <div>
+                              <div className="font-medium">{product.name}</div>
+                              {product.description && (
+                                <div className="text-sm text-gray-500 truncate max-w-xs">
+                                  {product.description}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{product.categories?.name}</TableCell>
+                        <TableCell>
+                          R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div className={`font-medium ${
+                              product.stock_quantity === 0 ? 'text-red-600' :
+                              product.stock_quantity <= product.minimum_stock ? 'text-orange-600' :
+                              'text-green-600'
+                            }`}>
+                              {product.stock_quantity} unidades
+                            </div>
+                            <div className="text-gray-500">
+                              Mín: {product.minimum_stock}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {getStockBadge(product.stock_quantity, product.minimum_stock)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

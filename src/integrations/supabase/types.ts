@@ -33,41 +33,76 @@ export type Database = {
         }
         Relationships: []
       }
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
-          category: Database["public"]["Enums"]["product_category"]
+          category_id: string
           created_at: string
           description: string | null
           id: string
           image_url: string | null
+          minimum_stock: number
           name: string
           price: number
           stock_quantity: number
           updated_at: string
         }
         Insert: {
-          category: Database["public"]["Enums"]["product_category"]
+          category_id: string
           created_at?: string
           description?: string | null
           id?: string
           image_url?: string | null
+          minimum_stock?: number
           name: string
           price: number
           stock_quantity?: number
           updated_at?: string
         }
         Update: {
-          category?: Database["public"]["Enums"]["product_category"]
+          category_id?: string
           created_at?: string
           description?: string | null
           id?: string
           image_url?: string | null
+          minimum_stock?: number
           name?: string
           price?: number
           stock_quantity?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sales: {
         Row: {

@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,13 +18,18 @@ const productFormSchema = z.object({
   description: z.string().optional(),
   price: z.string().min(1, 'Preço é obrigatório'),
   stock_quantity: z.string().min(1, 'Quantidade é obrigatória'),
-  category: z.enum(['livros', 'artigos_religiosos'], {
-    required_error: 'Categoria é obrigatória',
-  }),
+  minimum_stock: z.string().min(1, 'Estoque mínimo é obrigatório'),
+  category_id: z.string().min(1, 'Categoria é obrigatória'),
   image_url: z.string().url().optional().or(z.literal('')),
 });
 
 type ProductFormValues = z.infer<typeof productFormSchema>;
+
+interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+}
 
 interface AddProductDialogProps {
   onProductAdded?: () => void;
@@ -34,6 +39,7 @@ interface AddProductDialogProps {
 export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const { toast } = useToast();
 
   const form = useForm<ProductFormValues>({
@@ -43,10 +49,33 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
       description: '',
       price: '',
       stock_quantity: '',
-      category: undefined,
+      minimum_stock: '5',
+      category_id: '',
       image_url: '',
     },
   });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching categories:', error);
+        return;
+      }
+
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   const onSubmit = async (values: ProductFormValues) => {
     try {
@@ -59,7 +88,8 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
           description: values.description || null,
           price: parseFloat(values.price),
           stock_quantity: parseInt(values.stock_quantity),
-          category: values.category,
+          minimum_stock: parseInt(values.minimum_stock),
+          category_id: values.category_id,
           image_url: values.image_url || null,
         });
 
@@ -105,7 +135,7 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
       <DialogTrigger asChild>
         {trigger || defaultTrigger}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Adicionar Produto</DialogTitle>
           <DialogDescription>
@@ -167,7 +197,7 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
                 name="stock_quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quantidade</FormLabel>
+                    <FormLabel>Quantidade Inicial</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -183,7 +213,25 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
 
             <FormField
               control={form.control}
-              name="category"
+              name="minimum_stock"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Estoque Mínimo</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="5"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoria</FormLabel>
@@ -194,8 +242,11 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="livros">Livros</SelectItem>
-                      <SelectItem value="artigos_religiosos">Artigos Religiosos</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
