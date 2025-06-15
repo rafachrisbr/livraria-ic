@@ -1,7 +1,9 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package } from 'lucide-react';
+import { Package, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Product {
@@ -21,6 +23,19 @@ export const ProductsList = () => {
 
   useEffect(() => {
     fetchProducts();
+    
+    // Configurar escuta em tempo real para produtos
+    const channel = supabase
+      .channel('products-list-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'products' }, 
+        () => fetchProducts()
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   const fetchProducts = async () => {
@@ -92,8 +107,22 @@ export const ProductsList = () => {
       </CardHeader>
       <CardContent>
         {products.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            Nenhum produto cadastrado
+          <div className="text-center py-8">
+            <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+              <Package className="h-8 w-8 text-slate-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Nenhum produto cadastrado
+            </h3>
+            <p className="text-gray-500 mb-4">
+              Cadastre produtos para começar a gerenciar seu estoque
+            </p>
+            <Link to="/products">
+              <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Cadastrar Produto
+              </Button>
+            </Link>
           </div>
         ) : (
           <div className="space-y-3 max-h-80 overflow-y-auto">

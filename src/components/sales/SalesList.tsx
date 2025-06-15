@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ShoppingCart, X, Calendar, DollarSign } from 'lucide-react';
+import { ShoppingCart, Calendar, DollarSign, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,6 +34,23 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
   useEffect(() => {
     fetchSales();
   }, [refreshTrigger]);
+
+  useEffect(() => {
+    fetchSales();
+    
+    // Configurar escuta em tempo real para vendas
+    const channel = supabase
+      .channel('sales-list-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'sales' }, 
+        () => fetchSales()
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, []);
 
   const fetchSales = async () => {
     try {
@@ -113,9 +130,22 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Nenhuma venda registrada
             </h3>
-            <p className="text-gray-500">
+            <p className="text-gray-500 mb-4">
               As vendas aparecerão aqui quando forem registradas
             </p>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-400">
+                Para fazer vendas, você precisa primeiro cadastrar produtos
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <Link to="/products">
+                  <Button variant="outline" className="w-full sm:w-auto">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Cadastrar Produtos
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -129,7 +159,7 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
                       </span>
                       <span className="font-medium">{sale.products.name}</span>
                       <Badge variant="default" className="text-xs">
-                        Ativa
+                        Concluída
                       </Badge>
                     </div>
                     

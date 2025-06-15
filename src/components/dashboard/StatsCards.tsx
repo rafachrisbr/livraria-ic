@@ -23,6 +23,28 @@ export const StatsCards = () => {
 
   useEffect(() => {
     fetchStats();
+    
+    // Configurar escuta em tempo real para produtos e vendas
+    const productsChannel = supabase
+      .channel('stats-products-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'products' }, 
+        () => fetchStats()
+      )
+      .subscribe();
+
+    const salesChannel = supabase
+      .channel('stats-sales-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'sales' }, 
+        () => fetchStats()
+      )
+      .subscribe();
+
+    return () => {
+      productsChannel.unsubscribe();
+      salesChannel.unsubscribe();
+    };
   }, []);
 
   const fetchStats = async () => {
@@ -56,6 +78,15 @@ export const StatsCards = () => {
           totalStockValue,
           todaySales: todaySalesCount,
           todayRevenue: todayRevenueValue,
+        });
+      } else {
+        // Se não há produtos, zerar todas as estatísticas
+        setStats({
+          totalProducts: 0,
+          lowStockProducts: 0,
+          totalStockValue: 0,
+          todaySales: 0,
+          todayRevenue: 0,
         });
       }
     } catch (error) {
