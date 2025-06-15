@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Login from './Login';
 import Dashboard from './Dashboard';
@@ -6,12 +7,18 @@ import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const { user, loading, isAdmin } = useAuth();
+  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
-    console.log('Index component - User:', user?.email, 'Admin:', isAdmin, 'Loading:', loading);
+    console.log('Index component - User:', user?.email || 'undefined', 'Admin:', isAdmin, 'Loading:', loading);
+    
+    // Only show content after loading is complete
+    if (!loading) {
+      setShowContent(true);
+    }
   }, [user, isAdmin, loading]);
 
-  if (loading) {
+  if (loading || !showContent) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">

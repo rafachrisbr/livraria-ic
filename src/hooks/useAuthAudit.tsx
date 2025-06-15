@@ -1,62 +1,40 @@
 
 import { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAuthAudit = () => {
+  const { user } = useAuth();
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    if (!user) return;
+
+    const logAuthEvent = async (action: string) => {
+      try {
+        // Get IP address
+        let ipAddress = 'unknown';
         try {
-          const getUserIP = async () => {
-            try {
-              const response = await fetch('https://api.ipify.org?format=json');
-              const data = await response.json();
-              return data.ip;
-            } catch {
-              return null;
-            }
-          };
-
-          const userAgent = navigator.userAgent;
-          const ipAddress = await getUserIP();
-
-          if (event === 'SIGNED_IN' && session?.user) {
-            await supabase.rpc('log_auth_event', {
-              p_event_type: 'LOGIN',
-              p_details: {
-                email: session.user.email,
-                login_method: 'email',
-                success: true
-              },
-              p_ip_address: ipAddress,
-              p_user_agent: userAgent
-            });
-          } else if (event === 'SIGNED_OUT') {
-            await supabase.rpc('log_auth_event', {
-              p_event_type: 'LOGOUT',
-              p_details: {
-                success: true
-              },
-              p_ip_address: ipAddress,
-              p_user_agent: userAgent
-            });
-          } else if (event === 'PASSWORD_RECOVERY') {
-            await supabase.rpc('log_auth_event', {
-              p_event_type: 'PASSWORD_RECOVERY',
-              p_details: {
-                email: session?.user?.email,
-                success: true
-              },
-              p_ip_address: ipAddress,
-              p_user_agent: userAgent
-            });
-          }
-        } catch (error) {
-          console.error('Error logging auth event:', error);
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          const ipData = await ipResponse.json();
+          ipAddress = ipData.ip;
+        } catch (ipError) {
+          console.warn('Could not get IP address:', ipError);
         }
-      }
-    );
 
-    return () => subscription.unsubscribe();
-  }, []);
+        await supabase.from('audit_logs').insert({
+          action_type: action,
+          table_name: 'auth',
+          details: { email: user.email },
+          user_id: user.id,
+          ip_address: ipAddress,
+          user_agent: navigator.userAgent,
+        });
+      } catch (error) {
+        console.error('Error logging auth event:', error);
+      }
+    };
+
+    // Log sign in event only once
+    logAuthEvent('SIGN_IN');
+  }, [user?.id]); // Only depend on user ID to avoid multiple calls
 };

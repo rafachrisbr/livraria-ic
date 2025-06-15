@@ -29,58 +29,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
-        
-        console.log('Auth state change:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          checkAdminStatus(session.user.id);
-        } else {
-          setIsAdmin(false);
-          setLoading(false);
-        }
-      }
-    );
-
-    // Then get initial session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
-        if (!mounted) return;
-        
-        console.log('Initial session:', initialSession?.user?.email);
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        
-        if (initialSession?.user) {
-          await checkAdminStatus(initialSession.user.id);
-        } else {
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error getting initial session:', error);
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    getInitialSession();
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   const checkAdminStatus = async (userId: string) => {
     try {
@@ -103,10 +52,91 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Error in checkAdminStatus:', error);
       setIsAdmin(false);
-    } finally {
-      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+    let adminCheckInProgress = false;
+
+    const initializeAuth = async () => {
+      try {
+        console.log('Initializing auth...');
+        
+        // Get initial session
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting initial session:', error);
+          if (mounted) {
+            setUser(null);
+            setSession(null);
+            setIsAdmin(false);
+            setLoading(false);
+            setAuthInitialized(true);
+          }
+          return;
+        }
+
+        console.log('Initial session:', initialSession?.user?.email || 'No session');
+        
+        if (mounted) {
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+          
+          if (initialSession?.user && !adminCheckInProgress) {
+            adminCheckInProgress = true;
+            await checkAdminStatus(initialSession.user.id);
+          } else {
+            setIsAdmin(false);
+          }
+          
+          setLoading(false);
+          setAuthInitialized(true);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setUser(null);
+          setSession(null);
+          setIsAdmin(false);
+          setLoading(false);
+          setAuthInitialized(true);
+        }
+      }
+    };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted || !authInitialized) return;
+        
+        console.log('Auth state change:', event, session?.user?.email || 'No session');
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user && !adminCheckInProgress) {
+          adminCheckInProgress = true;
+          await checkAdminStatus(session.user.id);
+          adminCheckInProgress = false;
+        } else {
+          setIsAdmin(false);
+        }
+        
+        if (!session) {
+          setLoading(false);
+        }
+      }
+    );
+
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -122,16 +152,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         console.error('Sign in error:', error);
-        throw error;
+        setLoading(false);
+        return { error };
       }
       
       console.log('Sign in successful:', data.user?.email);
       return { error: null };
     } catch (error: any) {
       console.error('Sign in error:', error);
-      return { error };
-    } finally {
       setLoading(false);
+      return { error };
     }
   };
 
@@ -156,16 +186,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         console.error('Sign up error:', error);
-        throw error;
+        setLoading(false);
+        return { error };
       }
       
       console.log('Sign up successful for:', data.user?.email);
+      setLoading(false);
       return { error: null };
     } catch (error: any) {
       console.error('Sign up error:', error);
-      return { error };
-    } finally {
       setLoading(false);
+      return { error };
     }
   };
 
@@ -180,15 +211,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setSession(null);
       setIsAdmin(false);
+      setLoading(false);
       
       setTimeout(() => {
         window.location.href = '/';
-      }, 500);
+      }, 100);
     } catch (error) {
       console.error('Sign out error:', error);
-      window.location.href = '/';
-    } finally {
       setLoading(false);
+      window.location.href = '/';
     }
   };
 
