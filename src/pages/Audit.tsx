@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -65,7 +64,7 @@ const Audit = () => {
           record_id,
           details,
           created_at,
-          administrators!inner (
+          administrators(user_id) (
             name,
             email
           )
