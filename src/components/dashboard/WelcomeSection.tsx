@@ -1,13 +1,45 @@
 
 import { Calendar } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface WelcomeSectionProps {
   userEmail?: string;
 }
 
 export const WelcomeSection = ({ userEmail }: WelcomeSectionProps) => {
-  // Extract name from email (part before @)
-  const userName = userEmail ? userEmail.split('@')[0] : 'Usuário';
+  const [name, setName] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchName = async () => {
+      try {
+        // Só faz a busca se tiver e-mail
+        if (!userEmail) {
+          setName(null);
+          return;
+        }
+        // Busca o registro do administrador pelo e-mail da sessão
+        const { data, error } = await supabase
+          .from('administrators')
+          .select('name')
+          .eq('email', userEmail)
+          .maybeSingle();
+
+        if (error) {
+          setName(null);
+          return;
+        }
+        setName(data?.name ?? null);
+      } catch {
+        setName(null);
+      }
+    };
+
+    fetchName();
+  }, [userEmail]);
+
+  // Se não conseguir buscar o nome, usa só "Usuário" para fallback
+  const userName = name || 'Usuário';
   
   return (
     <div className="mb-10">
