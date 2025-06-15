@@ -7,6 +7,10 @@ import { Loader2 } from 'lucide-react';
 const Index = () => {
   const { user, loading, isAdmin } = useAuth();
 
+  useEffect(() => {
+    console.log('Index component - User:', user?.email, 'Admin:', isAdmin, 'Loading:', loading);
+  }, [user, isAdmin, loading]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -20,10 +24,17 @@ const Index = () => {
 
   // If user is logged in and is an admin, show dashboard
   if (user && isAdmin) {
+    console.log('Showing dashboard for admin user');
     return <Dashboard />;
   }
 
+  // If user is logged in but not admin, show access denied in login page
+  if (user && !isAdmin) {
+    console.log('User logged in but not admin, showing login with message');
+  }
+
   // Otherwise show login
+  console.log('Showing login page');
   return <Login />;
 };
 
