@@ -1,12 +1,12 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, ShoppingCart, BarChart3, Shield, Plus } from 'lucide-react';
+import { Package, ShoppingCart, BarChart3, Shield, Plus, Tag, Warehouse } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const ActionCards = () => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
       <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-blue-800">
@@ -42,6 +42,26 @@ export const ActionCards = () => {
             <Button className="w-full bg-green-600 hover:bg-green-700">
               <Plus className="h-4 w-4 mr-2" />
               Nova Venda
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-red-800">
+            <Tag className="h-5 w-5" />
+            <span>Promoções</span>
+          </CardTitle>
+          <CardDescription className="text-red-600">
+            Crie e gerencie promoções
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link to="/promotions">
+            <Button className="w-full bg-red-600 hover:bg-red-700">
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Promoção
             </Button>
           </Link>
         </CardContent>

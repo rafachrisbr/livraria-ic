@@ -9,6 +9,8 @@ import { StatsCards } from '@/components/dashboard/StatsCards';
 import { ActionCards } from '@/components/dashboard/ActionCards';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { ProductsList } from '@/components/dashboard/ProductsList';
+import { PromotionsList } from '@/components/dashboard/PromotionsList';
+import { InventoryOverview } from '@/components/dashboard/InventoryOverview';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -54,6 +56,8 @@ const Dashboard = () => {
           <ActionCards />
           <div className="space-y-6">
             <ProductsList />
+            <PromotionsList />
+            <InventoryOverview />
             <RecentActivity />
           </div>
         </main>
@@ -69,8 +73,12 @@ const Dashboard = () => {
         <WelcomeSection userEmail={user?.email} />
         <StatsCards />
         <ActionCards />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
           <ProductsList />
+          <PromotionsList />
+          <InventoryOverview />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-8 mb-10">
           <RecentActivity />
         </div>
       </main>
