@@ -1,15 +1,23 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Shield, Calendar, User, Activity } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { MobileHeader } from '@/components/mobile/MobileHeader';
-import { useIsMobile } from '@/hooks/use-mobile';
+
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Shield } from "lucide-react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { MobileHeader } from "@/components/mobile/MobileHeader";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AuditLog {
   id: string;
@@ -18,10 +26,17 @@ interface AuditLog {
   record_id: string | null;
   details: any;
   created_at: string;
-  administrators: {
+  user_id: string;
+  administrator?: {
     name: string | null;
     email: string;
   } | null;
+}
+
+interface Administrator {
+  user_id: string;
+  name: string | null;
+  email: string;
 }
 
 const Audit = () => {
@@ -37,14 +52,11 @@ const Audit = () => {
 
   useEffect(() => {
     fetchAuditLogs();
-    
-    // Configurar escuta em tempo real para logs de auditoria
+
+    // Escuta realtime
     const channel = supabase
-      .channel('audit-logs-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'audit_logs' }, 
-        () => fetchAuditLogs()
-      )
+      .channel("audit-logs-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "audit_logs" }, fetchAuditLogs)
       .subscribe();
 
     return () => {
@@ -55,31 +67,34 @@ const Audit = () => {
   const fetchAuditLogs = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select(`
-          id,
-          action_type,
-          table_name,
-          record_id,
-          details,
-          created_at,
-          administrators(user_id) (
-            name,
-            email
-          )
-        `)
-        .order('created_at', { ascending: false })
+      // Buscar todos administradores
+      const { data: admins, error: adminError } = await supabase
+        .from("administrators")
+        .select("user_id, name, email");
+      if (adminError) throw adminError;
+
+      // Buscar logs
+      const { data: logs, error: auditError } = await supabase
+        .from("audit_logs")
+        .select(`id, action_type, table_name, record_id, details, created_at, user_id`)
+        .order("created_at", { ascending: false })
         .limit(100);
 
-      if (error) throw error;
-      setAuditLogs(data || []);
+      if (auditError) throw auditError;
+
+      // Associar admin ao log
+      const logsWithAdmins = (logs || []).map((log) => ({
+        ...log,
+        administrator: admins?.find((admin) => admin.user_id === log.user_id) || null,
+      }));
+
+      setAuditLogs(logsWithAdmins);
     } catch (error) {
-      console.error('Error fetching audit logs:', error);
+      console.error("Error fetching audit logs:", error);
       toast({
-        title: 'Erro',
-        description: 'Erro ao carregar logs de auditoria',
-        variant: 'destructive'
+        title: "Erro",
+        description: "Erro ao carregar logs de auditoria",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -88,51 +103,45 @@ const Audit = () => {
 
   const getActionTypeColor = (actionType: string) => {
     switch (actionType) {
-      case 'CREATE':
-      case 'INSERT':
-        return 'bg-green-100 text-green-800';
-      case 'UPDATE':
-        return 'bg-blue-100 text-blue-800';
-      case 'DELETE':
-        return 'bg-red-100 text-red-800';
+      case "CREATE":
+      case "INSERT":
+        return "bg-green-100 text-green-800";
+      case "UPDATE":
+        return "bg-blue-100 text-blue-800";
+      case "DELETE":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getTableDisplayName = (tableName: string) => {
     const tableNames = {
-      'products': 'Produtos',
-      'sales': 'Vendas',
-      'categories': 'Categorias',
-      'administrators': 'Administradores'
+      products: "Produtos",
+      sales: "Vendas",
+      categories: "Categorias",
+      administrators: "Administradores",
     };
     return tableNames[tableName as keyof typeof tableNames] || tableName;
   };
 
   const formatDetails = (details: any) => {
-    if (!details) return '';
-    
+    if (!details) return "";
     if (details.product_name) {
-      return `${details.product_name} - Qtd: ${details.quantity || ''} - Valor: R$ ${details.total_price || details.price || ''}`;
+      return `${details.product_name} - Qtd: ${details.quantity || ""} - Valor: R$ ${
+        details.total_price || details.price || ""
+      }`;
     }
-    
     if (details.name) {
       return details.name;
     }
-    
-    return JSON.stringify(details).slice(0, 100) + '...';
+    return JSON.stringify(details).slice(0, 100) + "...";
   };
 
   if (isMobile) {
     return (
       <div className="min-h-screen bg-slate-50">
-        <MobileHeader 
-          title="Auditoria" 
-          subtitle="Logs do sistema"
-          showBackButton
-        />
-
+        <MobileHeader title="Auditoria" subtitle="Logs do sistema" showBackButton />
         <main className="px-4 py-6">
           <Card className="bg-white border-slate-200">
             <CardHeader>
@@ -154,16 +163,14 @@ const Audit = () => {
                   {auditLogs.map((log) => (
                     <div key={log.id} className="border rounded-lg p-3">
                       <div className="flex items-start justify-between mb-2">
-                        <Badge className={getActionTypeColor(log.action_type)}>
-                          {log.action_type}
-                        </Badge>
-                        <span className="text-xs text-gray-500">
-                          {new Date(log.created_at).toLocaleString('pt-BR')}
-                        </span>
+                        <Badge className={getActionTypeColor(log.action_type)}>{log.action_type}</Badge>
+                        <span className="text-xs text-gray-500">{new Date(log.created_at).toLocaleString("pt-BR")}</span>
                       </div>
                       <div className="text-sm">
                         <p className="font-medium">{getTableDisplayName(log.table_name)}</p>
-                        <p className="text-gray-600">{log.administrators?.name || log.administrators?.email}</p>
+                        <p className="text-gray-600">
+                          {log.administrator?.name || log.administrator?.email || "N/A"}
+                        </p>
                         {log.details && (
                           <p className="text-gray-500 text-xs mt-1">{formatDetails(log.details)}</p>
                         )}
@@ -245,16 +252,20 @@ const Audit = () => {
                         <TableCell>{getTableDisplayName(log.table_name)}</TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{log.administrators?.name || 'N/A'}</div>
-                            <div className="text-sm text-gray-500">{log.administrators?.email}</div>
+                            <div className="font-medium">
+                              {log.administrator?.name || "N/A"}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {log.administrator?.email}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            {new Date(log.created_at).toLocaleDateString('pt-BR')}
+                            {new Date(log.created_at).toLocaleDateString("pt-BR")}
                             <br />
                             <span className="text-gray-500">
-                              {new Date(log.created_at).toLocaleTimeString('pt-BR')}
+                              {new Date(log.created_at).toLocaleTimeString("pt-BR")}
                             </span>
                           </div>
                         </TableCell>
