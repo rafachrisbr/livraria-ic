@@ -1,207 +1,221 @@
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { LogIn, UserPlus } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
-const Login = ({ onLogin }: { onLogin: () => void }) => {
+const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showRegister, setShowRegister] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState('');
   const [accessKey, setAccessKey] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const { toast } = useToast();
+  const [showSignUp, setShowSignUp] = useState(false);
+  const { signIn, signUp, loading } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulação de login para demonstração
-    if (email && password) {
+    
+    if (!email || !password) {
       toast({
-        title: "Login realizado com sucesso!",
-        description: "Bem-vindo ao sistema da Livraria Imaculada Conceição",
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive",
       });
-      onLogin();
-    } else {
+      return;
+    }
+
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      console.error('Login error:', error);
       toast({
         title: "Erro no login",
-        description: "Por favor, preencha todos os campos",
+        description: error.message || "Credenciais inválidas. Verifique seu email e senha.",
         variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Login realizado com sucesso!",
+        description: "Bem-vindo ao sistema da Livraria Imaculada Conceição.",
       });
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (accessKey !== 'salvemaria') {
       toast({
         title: "Chave de acesso inválida",
-        description: "A chave de acesso está incorreta",
+        description: "A chave de acesso está incorreta.",
         variant: "destructive",
       });
       return;
     }
 
-    if (newPassword !== confirmPassword) {
+    if (!email || !password || !name) {
       toast({
-        title: "Senhas não coincidem",
-        description: "As senhas devem ser iguais",
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
         variant: "destructive",
       });
       return;
     }
 
-    if (newEmail && newPassword && accessKey === 'salvemaria') {
+    const { error } = await signUp(email, password, name);
+    
+    if (error) {
+      console.error('Sign up error:', error);
       toast({
-        title: "Administrador cadastrado!",
-        description: "Novo administrador criado com sucesso",
+        title: "Erro no cadastro",
+        description: error.message || "Erro ao criar conta de administrador.",
+        variant: "destructive",
       });
-      setShowRegister(false);
-      setAccessKey('');
-      setNewEmail('');
-      setNewPassword('');
-      setConfirmPassword('');
+    } else {
+      toast({
+        title: "Cadastro realizado com sucesso!",
+        description: "Verifique seu email para confirmar a conta.",
+      });
+      setShowSignUp(false);
+      setIsSignUp(false);
     }
   };
 
+  const toggleSignUp = () => {
+    setShowSignUp(!showSignUp);
+    setIsSignUp(!isSignUp);
+    setEmail('');
+    setPassword('');
+    setName('');
+    setAccessKey('');
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Logo Header */}
-        <div className="text-center space-y-2">
-          <div className="w-20 h-20 mx-auto bg-blue-900 rounded-full flex items-center justify-center">
-            <span className="text-white font-bold text-xl">IC</span>
+        <div className="text-center space-y-4">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h1 className="text-2xl font-bold text-blue-900">
+              Fraternidade Sacerdotal São Pio X
+            </h1>
+            <h2 className="text-lg text-blue-700 mt-2">
+              Livraria Imaculada Conceição
+            </h2>
+            <p className="text-sm text-gray-600 mt-2">
+              Sistema Administrativo
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-blue-900">Livraria Imaculada Conceição</h1>
-          <p className="text-sm text-blue-700">Fraternidade Sacerdotal São Pio X</p>
         </div>
 
-        {!showRegister ? (
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-            <CardHeader className="text-center">
-              <CardTitle className="text-blue-900">Acesso Administrativo</CardTitle>
-              <CardDescription>
-                Entre com suas credenciais de administrador
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full bg-blue-900 hover:bg-blue-800">
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Entrar
-                </Button>
-              </form>
+        {/* Login/SignUp Form */}
+        <Card className="shadow-xl">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl text-center">
+              {isSignUp ? 'Cadastrar Administrador' : 'Login Administrativo'}
+            </CardTitle>
+            <CardDescription className="text-center">
+              {isSignUp 
+                ? 'Cadastre um novo administrador no sistema' 
+                : 'Acesse o sistema da livraria'
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
+              {isSignUp && (
+                <>
+                  <div className="space-y-2">
+                    <label htmlFor="accessKey" className="text-sm font-medium">
+                      Chave de Acesso *
+                    </label>
+                    <Input
+                      id="accessKey"
+                      type="password"
+                      placeholder="Digite a chave de acesso"
+                      value={accessKey}
+                      onChange={(e) => setAccessKey(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="name" className="text-sm font-medium">
+                      Nome Completo *
+                    </label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Digite seu nome completo"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </>
+              )}
               
-              <div className="mt-6 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowRegister(true)}
-                  className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Cadastrar Novo Administrador
-                </Button>
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-sm font-medium">
+                  Email *
+                </label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="administrador@exemplo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur">
-            <CardHeader className="text-center">
-              <CardTitle className="text-blue-900">Cadastro de Administrador</CardTitle>
-              <CardDescription>
-                Insira a chave de acesso para criar um novo administrador
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="accessKey">Chave de Acesso</Label>
-                  <Input
-                    id="accessKey"
-                    type="password"
-                    value={accessKey}
-                    onChange={(e) => setAccessKey(e.target.value)}
-                    placeholder="Digite a chave de acesso"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newEmail">E-mail</Label>
-                  <Input
-                    id="newEmail"
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="novo@email.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">Senha</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowRegister(false)}
-                    className="flex-1"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" className="flex-1 bg-blue-900 hover:bg-blue-800">
-                    Cadastrar
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+              
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Senha *
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Digite sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+
+              <Button 
+                type="submit" 
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isSignUp ? 'Cadastrando...' : 'Entrando...'}
+                  </>
+                ) : (
+                  isSignUp ? 'Cadastrar Administrador' : 'Entrar'
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-4 text-center">
+              <Button 
+                variant="link" 
+                onClick={toggleSignUp}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                {isSignUp 
+                  ? 'Já tem uma conta? Fazer login' 
+                  : 'Cadastrar novo administrador'
+                }
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
