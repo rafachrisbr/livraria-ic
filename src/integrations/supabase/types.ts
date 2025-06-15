@@ -67,6 +67,7 @@ export type Database = {
           minimum_stock: number
           name: string
           price: number
+          product_code: string
           stock_quantity: number
           updated_at: string
         }
@@ -79,6 +80,7 @@ export type Database = {
           minimum_stock?: number
           name: string
           price: number
+          product_code: string
           stock_quantity?: number
           updated_at?: string
         }
@@ -91,6 +93,7 @@ export type Database = {
           minimum_stock?: number
           name?: string
           price?: number
+          product_code?: string
           stock_quantity?: number
           updated_at?: string
         }
