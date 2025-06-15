@@ -94,62 +94,69 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
       }
 
       // Buscar o administrador atual
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: 'Erro',
+          description: 'Usuário não autenticado',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const { data: adminData, error: adminError } = await supabase
         .from('administrators')
         .select('id')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .eq('user_id', user.id)
         .single();
 
-      if (adminError) throw adminError;
+      if (adminError) {
+        console.error('Error fetching admin:', adminError);
+        toast({
+          title: 'Erro',
+          description: 'Erro ao buscar dados do administrador',
+          variant: 'destructive'
+        });
+        return;
+      }
 
       const unitPrice = selectedProduct.price;
       const totalPrice = unitPrice * values.quantity;
 
-      // Usar uma transação para garantir consistência dos dados
-      const { error: transactionError } = await supabase.rpc('execute_sale_transaction', {
-        p_product_id: values.product_id,
-        p_administrator_id: adminData.id,
-        p_quantity: values.quantity,
-        p_unit_price: unitPrice,
-        p_total_price: totalPrice,
-        p_payment_method: values.payment_method,
-        p_sale_date: values.sale_date,
-        p_notes: values.notes || null
-      });
+      // Criar a venda
+      const { error: saleError } = await supabase
+        .from('sales')
+        .insert({
+          product_id: values.product_id,
+          administrator_id: adminData.id,
+          quantity: values.quantity,
+          unit_price: unitPrice,
+          total_price: totalPrice,
+          payment_method: values.payment_method,
+          sale_date: values.sale_date,
+          notes: values.notes || null
+        });
 
-      if (transactionError) {
-        // Se a função RPC não existir, fazer manualmente
-        console.log('RPC function not found, executing manual transaction');
-        
-        // Criar a venda
-        const { error: saleError } = await supabase
-          .from('sales')
-          .insert({
-            product_id: values.product_id,
-            administrator_id: adminData.id,
-            quantity: values.quantity,
-            unit_price: unitPrice,
-            total_price: totalPrice,
-            payment_method: values.payment_method,
-            sale_date: values.sale_date,
-            notes: values.notes || null
-          });
+      if (saleError) {
+        console.error('Error creating sale:', saleError);
+        throw saleError;
+      }
 
-        if (saleError) throw saleError;
+      // Atualizar o estoque do produto
+      const newStockQuantity = selectedProduct.stock_quantity - values.quantity;
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ stock_quantity: newStockQuantity })
+        .eq('id', values.product_id);
 
-        // Atualizar o estoque do produto
-        const newStockQuantity = selectedProduct.stock_quantity - values.quantity;
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ stock_quantity: newStockQuantity })
-          .eq('id', values.product_id);
-
-        if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error updating stock:', updateError);
+        throw updateError;
       }
 
       toast({
         title: 'Sucesso',
-        description: `Venda registrada! Estoque atualizado: ${selectedProduct.stock_quantity - values.quantity} unidades restantes.`
+        description: `Venda registrada! Estoque atualizado: ${newStockQuantity} unidades restantes.`
       });
 
       form.reset();
