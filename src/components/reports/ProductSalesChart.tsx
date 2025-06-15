@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
@@ -6,10 +5,24 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+const COLORS = [
+  "#5CADFF", // azul suave
+  "#FFD06B", // amarelo suave
+  "#8CE99A", // verde suave
+  "#FFA2B1", // rosa suave
+  "#A9A2FF", // lilás suave
+  "#FFD2A6", // laranja pastel
+  "#F0BEFF", // roxo pastel
+  "#83FFE8", // turquesa claro
+  "#FAB6B6", // coral claro
+  "#D0FFA3", // verde limão claro
+];
+
 interface ProductSaleData {
   name: string;
   quantity: number;
   revenue: number;
+  fill?: string;
 }
 
 const chartConfig = {
@@ -45,7 +58,7 @@ export const ProductSalesChart = () => {
       // Agrupar vendas por produto
       const productSales = salesData?.reduce((acc: Record<string, ProductSaleData>, sale) => {
         const productName = sale.products?.name || 'Produto Desconhecido';
-        
+
         if (!acc[productName]) {
           acc[productName] = {
             name: productName,
@@ -53,10 +66,10 @@ export const ProductSalesChart = () => {
             revenue: 0
           };
         }
-        
+
         acc[productName].quantity += sale.quantity;
         acc[productName].revenue += sale.total_price;
-        
+
         return acc;
       }, {}) || {};
 
@@ -65,7 +78,13 @@ export const ProductSalesChart = () => {
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 10); // Top 10 produtos
 
-      setData(sortedData);
+      // Associar cores suaves a cada produto
+      const dataWithColors = sortedData.map((item, idx) => ({
+        ...item,
+        fill: COLORS[idx % COLORS.length],
+      }));
+
+      setData(dataWithColors);
     } catch (error) {
       console.error('Error fetching product sales data:', error);
     } finally {
@@ -124,9 +143,14 @@ export const ProductSalesChart = () => {
                 />
                 <Bar 
                   dataKey="quantity" 
-                  fill="var(--color-quantity)" 
+                  // Aqui cada barra receberá sua cor correspondente
                   radius={[4, 4, 0, 0]}
-                />
+                  isAnimationActive={true}
+                >
+                  {data.map((entry, index) => (
+                    <cell key={`cell-${index}`} fill={entry.fill || COLORS[0]} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
