@@ -19,9 +19,25 @@ export const DeleteSaleDialog = ({ saleId, productName, quantity, totalPrice, on
   const { toast } = useToast();
 
   const handleDelete = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
+      // Buscar dados da venda para recuperar product_id e quantity realmente no banco
+      const { data: sale, error: fetchError } = await supabase
+        .from('sales')
+        .select('product_id, quantity')
+        .eq('id', saleId)
+        .maybeSingle();
+
+      if (fetchError || !sale) {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível encontrar a venda para excluir.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
       // Log da auditoria antes de excluir
       await supabase.rpc('log_audit_action', {
         p_action_type: 'DELETE',
@@ -29,29 +45,80 @@ export const DeleteSaleDialog = ({ saleId, productName, quantity, totalPrice, on
         p_record_id: saleId,
         p_details: {
           product_name: productName,
-          quantity: quantity,
+          quantity: sale.quantity,
           total_price: totalPrice
         }
       });
 
-      const { error } = await supabase
+      // Excluir a venda
+      const { error: deleteError } = await supabase
         .from('sales')
         .delete()
         .eq('id', saleId);
 
-      if (error) {
-        console.error('Error deleting sale:', error);
+      if (deleteError) {
         toast({
           title: 'Erro',
           description: 'Erro ao excluir venda. Tente novamente.',
           variant: 'destructive',
         });
+        setLoading(false);
         return;
+      }
+
+      // Devolver quantidade ao estoque
+      const { error: stockError } = await supabase
+        .from('products')
+        .update({
+          // Utiliza incremento de estoque; ideal para concorrencia!
+          stock_quantity: supabase.rpc('increment', { 
+            table: 'products',
+            column: 'stock_quantity',
+            amount: sale.quantity,
+            id: sale.product_id
+          })
+        })
+        .eq('id', sale.product_id);
+
+      // Fallback: Se a função 'increment' não existir, faz update manual:
+      if (stockError) {
+        // Buscar estoque atual
+        const { data: product, error: productError } = await supabase
+          .from('products')
+          .select('stock_quantity')
+          .eq('id', sale.product_id)
+          .maybeSingle();
+        if (!productError && product) {
+          const updatedQty = Number(product.stock_quantity) + Number(sale.quantity);
+          const { error: updateStockError } = await supabase
+            .from('products')
+            .update({ stock_quantity: updatedQty })
+            .eq('id', sale.product_id);
+          if (updateStockError) {
+            toast({
+              title: 'Erro',
+              description: 'Venda excluída, mas não foi possível atualizar o estoque do produto!',
+              variant: 'destructive',
+            });
+            setLoading(false);
+            onSaleDeleted();
+            return;
+          }
+        } else {
+          toast({
+            title: 'Erro',
+            description: 'Venda excluída, mas não foi possível encontrar o produto para atualizar estoque!',
+            variant: 'destructive',
+          });
+          setLoading(false);
+          onSaleDeleted();
+          return;
+        }
       }
 
       toast({
         title: 'Sucesso',
-        description: 'Venda excluída com sucesso!',
+        description: 'Venda excluída e estoque atualizado!',
       });
 
       onSaleDeleted();
@@ -96,3 +163,4 @@ export const DeleteSaleDialog = ({ saleId, productName, quantity, totalPrice, on
     </AlertDialog>
   );
 };
+
