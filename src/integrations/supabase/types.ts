@@ -39,8 +39,12 @@ export type Database = {
           created_at: string
           details: Json | null
           id: string
+          ip_address: unknown | null
+          new_values: Json | null
+          old_values: Json | null
           record_id: string | null
           table_name: string
+          user_agent: string | null
           user_id: string
         }
         Insert: {
@@ -48,8 +52,12 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
           record_id?: string | null
           table_name: string
+          user_agent?: string | null
           user_id: string
         }
         Update: {
@@ -57,8 +65,12 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          ip_address?: unknown | null
+          new_values?: Json | null
+          old_values?: Json | null
           record_id?: string | null
           table_name?: string
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []
@@ -280,11 +292,31 @@ export type Database = {
         Returns: boolean
       }
       log_audit_action: {
+        Args:
+          | {
+              p_action_type: string
+              p_table_name: string
+              p_record_id?: string
+              p_details?: Json
+            }
+          | {
+              p_action_type: string
+              p_table_name: string
+              p_record_id?: string
+              p_details?: Json
+              p_old_values?: Json
+              p_new_values?: Json
+              p_ip_address?: unknown
+              p_user_agent?: string
+            }
+        Returns: undefined
+      }
+      log_auth_event: {
         Args: {
-          p_action_type: string
-          p_table_name: string
-          p_record_id?: string
+          p_event_type: string
           p_details?: Json
+          p_ip_address?: unknown
+          p_user_agent?: string
         }
         Returns: undefined
       }

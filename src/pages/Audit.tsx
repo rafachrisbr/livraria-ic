@@ -1,158 +1,81 @@
 
-import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield } from "lucide-react";
+import { ArrowLeft, Shield, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { MobileHeader } from "@/components/mobile/MobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-interface AuditLog {
-  id: string;
-  action_type: string;
-  table_name: string;
-  record_id: string | null;
-  details: any;
-  created_at: string;
-  user_id: string;
-  administrator?: {
-    name: string | null;
-    email: string;
-  } | null;
-}
-
-interface Administrator {
-  user_id: string;
-  name: string | null;
-  email: string;
-}
+import { AuditFiltersComponent } from "@/components/audit/AuditFilters";
+import { AuditLogRow } from "@/components/audit/AuditLogRow";
+import { AuditExport } from "@/components/audit/AuditExport";
+import { useAuditLogs } from "@/hooks/useAuditLogs";
 
 const Audit = () => {
   const { user, signOut } = useAuth();
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
   const isMobile = useIsMobile();
+  
+  const {
+    auditLogs,
+    administrators,
+    loading,
+    filters,
+    currentPage,
+    totalPages,
+    handleFiltersChange,
+    clearFilters,
+    getActiveFiltersCount,
+    fetchAuditLogs,
+    setCurrentPage,
+  } = useAuditLogs();
 
   const handleLogout = async () => {
     await signOut();
   };
 
-  useEffect(() => {
-    fetchAuditLogs();
-
-    // Escuta realtime
-    const channel = supabase
-      .channel("audit-logs-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "audit_logs" }, fetchAuditLogs)
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, []);
-
-  const fetchAuditLogs = async () => {
-    try {
-      setLoading(true);
-      // Buscar todos administradores
-      const { data: admins, error: adminError } = await supabase
-        .from("administrators")
-        .select("user_id, name, email");
-      if (adminError) throw adminError;
-
-      // Buscar logs
-      const { data: logs, error: auditError } = await supabase
-        .from("audit_logs")
-        .select(`id, action_type, table_name, record_id, details, created_at, user_id`)
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (auditError) throw auditError;
-
-      // Associar admin ao log
-      const logsWithAdmins = (logs || []).map((log) => ({
-        ...log,
-        administrator: admins?.find((admin) => admin.user_id === log.user_id) || null,
-      }));
-
-      setAuditLogs(logsWithAdmins);
-    } catch (error) {
-      console.error("Error fetching audit logs:", error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar logs de auditoria",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getActionTypeColor = (actionType: string) => {
-    switch (actionType) {
-      case "CREATE":
-      case "INSERT":
-        return "bg-green-100 text-green-800";
-      case "UPDATE":
-        return "bg-blue-100 text-blue-800";
-      case "DELETE":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getTableDisplayName = (tableName: string) => {
-    const tableNames = {
-      products: "Produtos",
-      sales: "Vendas",
-      categories: "Categorias",
-      administrators: "Administradores",
-    };
-    return tableNames[tableName as keyof typeof tableNames] || tableName;
-  };
-
-  const formatDetails = (details: any) => {
-    if (!details) return "";
-    if (details.product_name) {
-      return `${details.product_name} - Qtd: ${details.quantity || ""} - Valor: R$ ${
-        details.total_price || details.price || ""
-      }`;
-    }
-    if (details.name) {
-      return details.name;
-    }
-    return JSON.stringify(details).slice(0, 100) + "...";
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchAuditLogs(page);
   };
 
   if (isMobile) {
     return (
       <div className="min-h-screen bg-slate-50">
         <MobileHeader title="Auditoria" subtitle="Logs do sistema" showBackButton />
-        <main className="px-4 py-6">
+        <main className="px-4 py-6 space-y-4">
+          {/* Filtros */}
+          <AuditFiltersComponent
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            administrators={administrators}
+            onClearFilters={clearFilters}
+            activeFiltersCount={getActiveFiltersCount()}
+          />
+
+          {/* Exportação */}
+          <div className="flex justify-end">
+            <AuditExport logs={auditLogs} isLoading={loading} />
+          </div>
+
+          {/* Lista de Logs */}
           <Card className="bg-white border-slate-200">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Shield className="h-5 w-5" />
-                <span>Logs de Auditoria</span>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Shield className="h-5 w-5" />
+                  <span>Logs de Auditoria</span>
+                </div>
+                <span className="text-sm font-normal text-gray-500">
+                  {auditLogs.length} registros
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-4">Carregando logs...</div>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                  <p className="mt-2 text-gray-500">Carregando logs...</p>
+                </div>
               ) : auditLogs.length === 0 ? (
                 <div className="text-center py-8">
                   <Shield className="h-12 w-12 text-slate-400 mx-auto mb-4" />
@@ -161,22 +84,35 @@ const Audit = () => {
               ) : (
                 <div className="space-y-3">
                   {auditLogs.map((log) => (
-                    <div key={log.id} className="border rounded-lg p-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <Badge className={getActionTypeColor(log.action_type)}>{log.action_type}</Badge>
-                        <span className="text-xs text-gray-500">{new Date(log.created_at).toLocaleString("pt-BR")}</span>
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-medium">{getTableDisplayName(log.table_name)}</p>
-                        <p className="text-gray-600">
-                          {log.administrator?.name || log.administrator?.email || "N/A"}
-                        </p>
-                        {log.details && (
-                          <p className="text-gray-500 text-xs mt-1">{formatDetails(log.details)}</p>
-                        )}
-                      </div>
-                    </div>
+                    <AuditLogRow key={log.id} log={log} />
                   ))}
+                </div>
+              )}
+
+              {/* Paginação Mobile */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  
+                  <span className="text-sm text-gray-600">
+                    {currentPage} de {totalPages}
+                  </span>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage >= totalPages}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -213,71 +149,100 @@ const Audit = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Filtros */}
+        <AuditFiltersComponent
+          filters={filters}
+          onFiltersChange={handleFiltersChange}
+          administrators={administrators}
+          onClearFilters={clearFilters}
+          activeFiltersCount={getActiveFiltersCount()}
+        />
+
+        {/* Header com exportação */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Logs de Auditoria</h2>
+            <p className="text-gray-600">{auditLogs.length} registros encontrados</p>
+          </div>
+          <AuditExport logs={auditLogs} isLoading={loading} />
+        </div>
+
+        {/* Lista de Logs */}
         <Card className="bg-white border-slate-200">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Shield className="h-5 w-5" />
-              <span>Logs de Auditoria</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             {loading ? (
-              <div className="text-center py-4">Carregando logs...</div>
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+                <p className="mt-4 text-gray-500">Carregando logs de auditoria...</p>
+              </div>
             ) : auditLogs.length === 0 ? (
-              <div className="text-center py-8">
-                <Shield className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-500">Nenhum log de auditoria encontrado</p>
+              <div className="text-center py-12">
+                <Shield className="h-16 w-16 text-slate-400 mx-auto mb-4" />
+                <p className="text-slate-500 text-lg">Nenhum log de auditoria encontrado</p>
+                <p className="text-slate-400 text-sm mt-2">
+                  Tente ajustar os filtros para ver mais resultados
+                </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Ação</TableHead>
-                      <TableHead>Tabela</TableHead>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>Data/Hora</TableHead>
-                      <TableHead>Detalhes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {auditLogs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell>
-                          <Badge className={getActionTypeColor(log.action_type)}>
-                            {log.action_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{getTableDisplayName(log.table_name)}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">
-                              {log.administrator?.name || "N/A"}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {log.administrator?.email}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {new Date(log.created_at).toLocaleDateString("pt-BR")}
-                            <br />
-                            <span className="text-gray-500">
-                              {new Date(log.created_at).toLocaleTimeString("pt-BR")}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm max-w-xs truncate" title={formatDetails(log.details)}>
-                            {formatDetails(log.details)}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="space-y-4">
+                {auditLogs.map((log) => (
+                  <AuditLogRow key={log.id} log={log} />
+                ))}
+              </div>
+            )}
+
+            {/* Paginação Desktop */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center mt-8 space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Anterior
+                </Button>
+
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const page = i + 1;
+                    return (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(page)}
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+                  
+                  {totalPages > 5 && (
+                    <>
+                      <span className="px-2">...</span>
+                      <Button
+                        variant={currentPage === totalPages ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(totalPages)}
+                      >
+                        {totalPages}
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
               </div>
             )}
           </CardContent>
