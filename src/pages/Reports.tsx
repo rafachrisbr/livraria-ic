@@ -110,34 +110,36 @@ const Reports = () => {
             promotion:promotions(id, name, discount_type, discount_value)
           `
         )
-        .neq("promotion_id", null)
+        .not("promotion_id", "is", null) // CORRIGIDO: Antes era .neq("promotion_id", null)
         .order("sale_date", { ascending: false });
 
       if (error) throw error;
 
-      const mapped: PromotionReport[] = (data || []).map((sale: any) => {
-        // Calcular o valor promocional correto, se possível:
-        let pricePromo = sale.unit_price;
-        if (sale.promotion?.discount_type === "percentage") {
-          pricePromo = sale.unit_price * (1 - (sale.promotion.discount_value / 100));
-        } else if (sale.promotion?.discount_type === "fixed_amount") {
-          pricePromo = Math.max(0, sale.unit_price - sale.promotion.discount_value);
-        }
-        const total_saved = (sale.unit_price - pricePromo) * sale.quantity;
+      const mapped: PromotionReport[] = (data || [])
+        .filter((sale: any) => !!sale.promotion_id) // Garantia extra, só processar vendas com promotion_id.
+        .map((sale: any) => {
+          // Calcular o valor promocional correto, se possível:
+          let pricePromo = sale.unit_price;
+          if (sale.promotion?.discount_type === "percentage") {
+            pricePromo = sale.unit_price * (1 - (sale.promotion.discount_value / 100));
+          } else if (sale.promotion?.discount_type === "fixed_amount") {
+            pricePromo = Math.max(0, sale.unit_price - sale.promotion.discount_value);
+          }
+          const total_saved = (sale.unit_price - pricePromo) * sale.quantity;
 
-        return {
-          sale_id: sale.id,
-          product_name: sale.product?.name,
-          promotion_name: sale.promotion?.name,
-          discount_type: sale.promotion?.discount_type,
-          discount_value: sale.promotion?.discount_value,
-          unit_price: sale.unit_price,
-          promotion_price: pricePromo,
-          sale_date: sale.sale_date,
-          quantity: sale.quantity,
-          total_saved,
-        };
-      });
+          return {
+            sale_id: sale.id,
+            product_name: sale.product?.name,
+            promotion_name: sale.promotion?.name,
+            discount_type: sale.promotion?.discount_type,
+            discount_value: sale.promotion?.discount_value,
+            unit_price: sale.unit_price,
+            promotion_price: pricePromo,
+            sale_date: sale.sale_date,
+            quantity: sale.quantity,
+            total_saved,
+          };
+        });
 
       setPromotionSales(mapped);
     } catch (err: any) {
