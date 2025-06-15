@@ -3,9 +3,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, BarChart3, TrendingUp, DollarSign, Calendar, AlertTriangle, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, DollarSign, Calendar, AlertTriangle, ShoppingCart, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { ProductSalesChart } from '@/components/reports/ProductSalesChart';
+import { PaymentMethodChart } from '@/components/reports/PaymentMethodChart';
+import { useExcelExport } from '@/hooks/useExcelExport';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReportData {
   totalSales: number;
@@ -27,6 +31,9 @@ const Reports = () => {
     totalProducts: 0
   });
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const { exportReportsToExcel } = useExcelExport();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchReportData();
@@ -75,6 +82,26 @@ const Reports = () => {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      await exportReportsToExcel();
+      toast({
+        title: 'Sucesso',
+        description: 'Relatório exportado com sucesso!'
+      });
+    } catch (error) {
+      console.error('Error exporting:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao exportar relatório',
+        variant: 'destructive'
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleLogout = async () => {
     await signOut();
   };
@@ -97,6 +124,14 @@ const Reports = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <Button 
+                onClick={handleExport} 
+                disabled={exporting}
+                variant="outline"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {exporting ? 'Exportando...' : 'Exportar Excel'}
+              </Button>
               <span className="text-sm text-gray-600">{user?.email}</span>
               <Button onClick={handleLogout} variant="outline" size="sm">
                 Logout
@@ -111,6 +146,7 @@ const Reports = () => {
           <div className="text-center py-8">Carregando relatórios...</div>
         ) : (
           <>
+            {/* Cards de métricas principais */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Card className="bg-white border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
@@ -164,7 +200,7 @@ const Reports = () => {
                 <CardHeader className="pb-4">
                   <div className="flex items-center space-x-3">
                     <div className="p-2 bg-purple-100 rounded-lg">
-                      <TrendingUp className="h-5 w-5 text-purple-600" />
+                      <Calendar className="h-5 w-5 text-purple-600" />
                     </div>
                     <div>
                       <CardTitle className="text-slate-800 text-lg">Valor do Estoque</CardTitle>
@@ -209,11 +245,18 @@ const Reports = () => {
               </Card>
             </div>
 
+            {/* Gráficos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              <ProductSalesChart />
+              <PaymentMethodChart />
+            </div>
+
+            {/* Resumo Geral */}
             <Card className="bg-white border-slate-200 shadow-sm">
               <CardHeader>
                 <div className="flex items-center space-x-3">
                   <div className="p-3 bg-slate-100 rounded-xl">
-                    <BarChart3 className="h-6 w-6 text-slate-600" />
+                    <DollarSign className="h-6 w-6 text-slate-600" />
                   </div>
                   <div>
                     <CardTitle className="text-slate-800">Resumo Geral</CardTitle>
