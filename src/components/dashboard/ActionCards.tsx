@@ -6,8 +6,51 @@ import { Link } from 'react-router-dom';
 
 export const ActionCards = () => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
-      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 gap-6 mb-8">
+
+      {/* NOVO CARD: Inventário com acesso fácil */}
+      <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 order-2 lg:order-3">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-yellow-800">
+            <Warehouse className="h-5 w-5" />
+            <span>Estoque</span>
+          </CardTitle>
+          <CardDescription className="text-yellow-600">
+            Consulte e controle os produtos em estoque
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link to="/inventory">
+            <Button className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold">
+              Ver Inventário
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      {/* CARD PRINCIPAL: Vendas -> DESTAQUE */}
+      <Card className="bg-gradient-to-br from-green-100 via-green-200 to-green-50 border-green-300 shadow-lg ring-2 ring-green-500/70 order-1">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-green-800 text-lg">
+            <ShoppingCart className="h-6 w-6" />
+            <span>Vendas (Principal)</span>
+          </CardTitle>
+          <CardDescription className="text-green-700 font-semibold">
+            Registre e acompanhe suas vendas
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link to="/sales">
+            <Button className="w-full bg-green-600 hover:bg-green-700 py-3 text-white font-bold text-lg border-2 border-green-700 shadow-md animate-pulse hover:animate-none">
+              <Plus className="h-5 w-5 mr-2" />
+              Nova Venda
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+
+      {/* PRODUTOS */}
+      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 order-3 lg:order-1">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-blue-800">
             <Package className="h-5 w-5" />
@@ -27,27 +70,8 @@ export const ActionCards = () => {
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-green-800">
-            <ShoppingCart className="h-5 w-5" />
-            <span>Vendas</span>
-          </CardTitle>
-          <CardDescription className="text-green-600">
-            Registre e acompanhe suas vendas
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link to="/sales">
-            <Button className="w-full bg-green-600 hover:bg-green-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Venda
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+      {/* PROMOÇÕES */}
+      <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 order-4">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-red-800">
             <Tag className="h-5 w-5" />
@@ -67,7 +91,8 @@ export const ActionCards = () => {
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+      {/* RELATÓRIOS */}
+      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 order-5">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-purple-800">
             <BarChart3 className="h-5 w-5" />
@@ -86,7 +111,8 @@ export const ActionCards = () => {
         </CardContent>
       </Card>
 
-      <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+      {/* AUDITORIA */}
+      <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 order-6">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2 text-orange-800">
             <Shield className="h-5 w-5" />

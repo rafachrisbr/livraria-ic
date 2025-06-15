@@ -94,7 +94,6 @@ export const InventoryOverview = () => {
     );
   }
 
-  // NOVA LÓGICA: ALERTA VISÍVEL SEMPRE QUE HÁ PRODUTOS CRÍTICOS
   if (lowStockProducts.length > 0 || outOfStockProducts.length > 0) {
     return (
       <Card className="bg-white border-slate-200">
@@ -175,13 +174,6 @@ export const InventoryOverview = () => {
                 </div>
               </div>
             )}
-            <div>
-              <Link to="/inventory">
-                <Button variant="outline" className="w-full border-red-700 text-red-700 hover:bg-red-50">
-                  Ver Inventário Completo
-                </Button>
-              </Link>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -210,11 +202,6 @@ export const InventoryOverview = () => {
           <p className="text-green-600 mb-4">
             Todos os produtos estão com estoque adequado
           </p>
-          <Link to="/inventory">
-            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
-              Ver Inventário Completo
-            </Button>
-          </Link>
         </div>
       </CardContent>
     </Card>
