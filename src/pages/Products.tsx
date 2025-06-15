@@ -4,12 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Package, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AddProductDialog } from '@/components/products/AddProductDialog';
 
 const Products = () => {
   const { user, signOut } = useAuth();
 
   const handleLogout = async () => {
     await signOut();
+  };
+
+  const handleProductAdded = () => {
+    // Aqui você pode adicionar lógica para atualizar a lista de produtos
+    console.log('Produto adicionado com sucesso!');
   };
 
   return (
@@ -41,10 +47,7 @@ const Products = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Produto
-          </Button>
+          <AddProductDialog onProductAdded={handleProductAdded} />
         </div>
 
         <Card className="bg-white border-slate-200 shadow-sm">
@@ -72,10 +75,15 @@ const Products = () => {
               <p className="text-gray-500 max-w-sm mx-auto mb-4">
                 Comece adicionando livros e artigos religiosos ao seu estoque
               </p>
-              <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Primeiro Produto
-              </Button>
+              <AddProductDialog 
+                onProductAdded={handleProductAdded}
+                trigger={
+                  <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Primeiro Produto
+                  </Button>
+                }
+              />
             </div>
           </CardContent>
         </Card>
