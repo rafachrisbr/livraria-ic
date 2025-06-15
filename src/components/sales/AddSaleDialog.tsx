@@ -13,6 +13,8 @@ import { z } from 'zod';
 import { Plus, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getBestPromotionalPrice, PromotionalPrice } from '@/utils/promotionUtils';
+import { PromotionalPriceDisplay } from '@/components/promotions/PromotionalPriceDisplay';
 
 const saleSchema = z.object({
   product_id: z.string().min(1, 'Selecione um produto'),
@@ -38,7 +40,9 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [promotionalPrice, setPromotionalPrice] = useState<PromotionalPrice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof saleSchema>>({
@@ -57,6 +61,13 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
       fetchProducts();
     }
   }, [open]);
+
+  // Calcular preço promocional quando produto ou quantidade mudarem
+  useEffect(() => {
+    if (selectedProduct) {
+      calculatePromotionalPrice();
+    }
+  }, [selectedProduct, form.watch('quantity')]);
 
   const fetchProducts = async () => {
     try {
@@ -78,8 +89,29 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof saleSchema>) => {
+  const calculatePromotionalPrice = async () => {
     if (!selectedProduct) return;
+
+    setIsCalculatingPrice(true);
+    try {
+      const priceInfo = await getBestPromotionalPrice(selectedProduct.id, selectedProduct.price);
+      setPromotionalPrice(priceInfo);
+    } catch (error) {
+      console.error('Error calculating promotional price:', error);
+      // Em caso de erro, usar preço original
+      setPromotionalPrice({
+        originalPrice: selectedProduct.price,
+        promotionalPrice: selectedProduct.price,
+        discount: 0,
+        hasPromotion: false
+      });
+    } finally {
+      setIsCalculatingPrice(false);
+    }
+  };
+
+  const onSubmit = async (values: z.infer<typeof saleSchema>) => {
+    if (!selectedProduct || !promotionalPrice) return;
 
     setIsLoading(true);
     try {
@@ -120,22 +152,26 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
         return;
       }
 
-      const unitPrice = selectedProduct.price;
+      // Usar o preço promocional se houver
+      const unitPrice = promotionalPrice.promotionalPrice;
       const totalPrice = unitPrice * values.quantity;
 
       // Criar a venda
+      const saleData = {
+        product_id: values.product_id,
+        administrator_id: adminData.id,
+        quantity: values.quantity,
+        unit_price: unitPrice,
+        total_price: totalPrice,
+        payment_method: values.payment_method,
+        sale_date: values.sale_date,
+        notes: values.notes || null,
+        promotion_id: promotionalPrice.hasPromotion ? promotionalPrice.promotion?.id : null
+      };
+
       const { error: saleError } = await supabase
         .from('sales')
-        .insert({
-          product_id: values.product_id,
-          administrator_id: adminData.id,
-          quantity: values.quantity,
-          unit_price: unitPrice,
-          total_price: totalPrice,
-          payment_method: values.payment_method,
-          sale_date: values.sale_date,
-          notes: values.notes || null
-        });
+        .insert(saleData);
 
       if (saleError) {
         console.error('Error creating sale:', saleError);
@@ -154,13 +190,22 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
         throw updateError;
       }
 
+      // Mostrar mensagem de sucesso com informações da promoção
+      let successMessage = `Venda registrada! Estoque atualizado: ${newStockQuantity} unidades restantes.`;
+      
+      if (promotionalPrice.hasPromotion) {
+        const totalSavings = (selectedProduct.price - unitPrice) * values.quantity;
+        successMessage += ` Desconto aplicado: R$ ${totalSavings.toFixed(2)}`;
+      }
+
       toast({
         title: 'Sucesso',
-        description: `Venda registrada! Estoque atualizado: ${newStockQuantity} unidades restantes.`
+        description: successMessage
       });
 
       form.reset();
       setSelectedProduct(null);
+      setPromotionalPrice(null);
       setOpen(false);
       onSaleAdded();
     } catch (error) {
@@ -178,6 +223,7 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
   const handleProductChange = (productId: string) => {
     const product = products.find(p => p.id === productId);
     setSelectedProduct(product || null);
+    setPromotionalPrice(null);
     form.setValue('product_id', productId);
   };
 
@@ -193,7 +239,7 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
         <DialogHeader>
           <DialogTitle>Registrar Nova Venda</DialogTitle>
           <DialogDescription>
-            Registre uma nova venda e atualize o estoque automaticamente
+            Registre uma nova venda e atualize o estoque automaticamente. Promoções são aplicadas automaticamente.
           </DialogDescription>
         </DialogHeader>
         
@@ -227,7 +273,7 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
             {selectedProduct && (
               <div className="p-3 bg-slate-50 rounded-lg">
                 <p className="text-sm text-slate-600">
-                  Preço unitário: R$ {selectedProduct.price.toFixed(2)}
+                  Preço original: R$ {selectedProduct.price.toFixed(2)}
                 </p>
                 <p className="text-sm text-slate-600">
                   Estoque disponível: {selectedProduct.stock_quantity} unidades
@@ -274,11 +320,17 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
               />
             </div>
 
+            {/* Exibir informações de preço promocional */}
             {selectedProduct && form.watch('quantity') && (
-              <div className="p-3 bg-green-50 rounded-lg">
-                <p className="text-sm font-medium text-green-800">
-                  Total: R$ {(selectedProduct.price * form.watch('quantity')).toFixed(2)}
-                </p>
+              <div className="p-3 bg-white border border-slate-200 rounded-lg">
+                {isCalculatingPrice ? (
+                  <p className="text-sm text-slate-500">Calculando promoções...</p>
+                ) : promotionalPrice ? (
+                  <PromotionalPriceDisplay 
+                    promotionalPrice={promotionalPrice}
+                    quantity={form.watch('quantity')}
+                  />
+                ) : null}
               </div>
             )}
 
@@ -334,7 +386,10 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading || !selectedProduct}>
+              <Button 
+                type="submit" 
+                disabled={isLoading || !selectedProduct || !promotionalPrice}
+              >
                 {isLoading ? 'Registrando...' : 'Registrar Venda'}
               </Button>
             </div>
