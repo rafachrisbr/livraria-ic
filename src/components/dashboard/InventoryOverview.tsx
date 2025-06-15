@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Warehouse, AlertTriangle, Package } from 'lucide-react';
@@ -95,43 +94,25 @@ export const InventoryOverview = () => {
     );
   }
 
-  return (
-    <Card className="bg-white border-slate-200">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Warehouse className="h-5 w-5" />
-          <span>Controle de Estoque</span>
-          {totalAlertsCount > 0 && (
+  // NOVA LÓGICA: ALERTA VISÍVEL SEMPRE QUE HÁ PRODUTOS CRÍTICOS
+  if (lowStockProducts.length > 0 || outOfStockProducts.length > 0) {
+    return (
+      <Card className="bg-white border-slate-200">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-red-700">
+            <AlertTriangle className="h-5 w-5 text-red-700" />
+            <span>Estoque Baixo</span>
             <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">
-              {totalAlertsCount}
+              {lowStockProducts.length + outOfStockProducts.length}
             </span>
-          )}
-        </CardTitle>
-        <CardDescription>
-          Alertas de estoque baixo e produtos em falta
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {totalAlertsCount === 0 ? (
-          <div className="text-center py-8">
-            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <Package className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-green-900 mb-2">
-              Estoque Normalizado
-            </h3>
-            <p className="text-green-600 mb-4">
-              Todos os produtos estão com estoque adequado
-            </p>
-            <Link to="/inventory">
-              <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
-                Ver Inventário Completo
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-4 max-h-80 overflow-y-auto">
-            {/* Produtos sem estoque */}
+          </CardTitle>
+          <CardDescription className="text-red-600">
+            Existem {lowStockProducts.length + outOfStockProducts.length} produtos com estoque abaixo do mínimo
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Lista de produtos sem estoque */}
             {outOfStockProducts.length > 0 && (
               <div>
                 <div className="flex items-center space-x-2 mb-2">
@@ -163,7 +144,7 @@ export const InventoryOverview = () => {
               </div>
             )}
 
-            {/* Produtos com estoque baixo */}
+            {/* Lista de produtos com estoque baixo */}
             {lowStockProducts.length > 0 && (
               <div>
                 <div className="flex items-center space-x-2 mb-2">
@@ -194,16 +175,47 @@ export const InventoryOverview = () => {
                 </div>
               </div>
             )}
-
-            <div className="pt-2 border-t">
+            <div>
               <Link to="/inventory">
-                <Button variant="outline" className="w-full">
+                <Button variant="outline" className="w-full border-red-700 text-red-700 hover:bg-red-50">
                   Ver Inventário Completo
                 </Button>
               </Link>
             </div>
           </div>
-        )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-white border-slate-200">
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2 text-green-900">
+          <Warehouse className="h-5 w-5" />
+          <span>Estoque Normalizado</span>
+        </CardTitle>
+        <CardDescription>
+          Todos os produtos estão com estoque adequado
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="text-center py-8">
+          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+            <Package className="h-8 w-8 text-green-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-green-900 mb-2">
+            Estoque Normalizado
+          </h3>
+          <p className="text-green-600 mb-4">
+            Todos os produtos estão com estoque adequado
+          </p>
+          <Link to="/inventory">
+            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+              Ver Inventário Completo
+            </Button>
+          </Link>
+        </div>
       </CardContent>
     </Card>
   );

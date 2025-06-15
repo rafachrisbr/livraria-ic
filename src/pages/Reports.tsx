@@ -380,7 +380,7 @@ const Reports = () => {
                           <th className="px-2 py-2 text-left">Preço Original</th>
                           <th className="px-2 py-2 text-left">Preço Promo</th>
                           <th className="px-2 py-2 text-left">Qtd</th>
-                          <th className="px-2 py-2 text-left">Total Economizado</th>
+                          <th className="px-2 py-2 text-left">Total Desconto</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -400,7 +400,7 @@ const Reports = () => {
                       </tbody>
                     </table>
                     <div className="mt-3 text-right text-sm">
-                      <b>Total economizado:</b>{" "}
+                      <b>Total desconto concedido:</b>{" "}
                       R$ {promotionSales.reduce((acc, p) => acc + p.total_saved, 0).toFixed(2)}
                     </div>
                   </div>
