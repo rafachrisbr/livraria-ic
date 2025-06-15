@@ -1,6 +1,16 @@
 
 import { useState } from 'react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +24,13 @@ interface DeleteSaleDialogProps {
   onSaleDeleted: () => void;
 }
 
-export const DeleteSaleDialog = ({ saleId, productName, quantity, totalPrice, onSaleDeleted }: DeleteSaleDialogProps) => {
+export const DeleteSaleDialog = ({
+  saleId,
+  productName,
+  quantity,
+  totalPrice,
+  onSaleDeleted,
+}: DeleteSaleDialogProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -46,8 +62,8 @@ export const DeleteSaleDialog = ({ saleId, productName, quantity, totalPrice, on
         p_details: {
           product_name: productName,
           quantity: sale.quantity,
-          total_price: totalPrice
-        }
+          total_price: totalPrice,
+        },
       });
 
       // Excluir a venda
@@ -66,54 +82,40 @@ export const DeleteSaleDialog = ({ saleId, productName, quantity, totalPrice, on
         return;
       }
 
-      // Devolver quantidade ao estoque
-      const { error: stockError } = await supabase
+      // Buscar estoque atual do produto
+      const { data: product, error: productError } = await supabase
         .from('products')
-        .update({
-          // Utiliza incremento de estoque; ideal para concorrencia!
-          stock_quantity: supabase.rpc('increment', { 
-            table: 'products',
-            column: 'stock_quantity',
-            amount: sale.quantity,
-            id: sale.product_id
-          })
-        })
-        .eq('id', sale.product_id);
+        .select('stock_quantity')
+        .eq('id', sale.product_id)
+        .maybeSingle();
 
-      // Fallback: Se a função 'increment' não existir, faz update manual:
-      if (stockError) {
-        // Buscar estoque atual
-        const { data: product, error: productError } = await supabase
+      if (!productError && product) {
+        const updatedQty = Number(product.stock_quantity) + Number(sale.quantity);
+        const { error: updateStockError } = await supabase
           .from('products')
-          .select('stock_quantity')
-          .eq('id', sale.product_id)
-          .maybeSingle();
-        if (!productError && product) {
-          const updatedQty = Number(product.stock_quantity) + Number(sale.quantity);
-          const { error: updateStockError } = await supabase
-            .from('products')
-            .update({ stock_quantity: updatedQty })
-            .eq('id', sale.product_id);
-          if (updateStockError) {
-            toast({
-              title: 'Erro',
-              description: 'Venda excluída, mas não foi possível atualizar o estoque do produto!',
-              variant: 'destructive',
-            });
-            setLoading(false);
-            onSaleDeleted();
-            return;
-          }
-        } else {
+          .update({ stock_quantity: updatedQty })
+          .eq('id', sale.product_id);
+        if (updateStockError) {
           toast({
             title: 'Erro',
-            description: 'Venda excluída, mas não foi possível encontrar o produto para atualizar estoque!',
+            description:
+              'Venda excluída, mas não foi possível atualizar o estoque do produto!',
             variant: 'destructive',
           });
           setLoading(false);
           onSaleDeleted();
           return;
         }
+      } else {
+        toast({
+          title: 'Erro',
+          description:
+            'Venda excluída, mas não foi possível encontrar o produto para atualizar estoque!',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        onSaleDeleted();
+        return;
       }
 
       toast({
@@ -137,7 +139,11 @@ export const DeleteSaleDialog = ({ saleId, productName, quantity, totalPrice, on
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-red-600 hover:text-red-700"
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       </AlertDialogTrigger>
@@ -145,13 +151,13 @@ export const DeleteSaleDialog = ({ saleId, productName, quantity, totalPrice, on
         <AlertDialogHeader>
           <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
           <AlertDialogDescription>
-            Tem certeza que deseja excluir a venda de {quantity}x {productName} (R$ {totalPrice.toFixed(2)})? 
+            Tem certeza que deseja excluir a venda de {quantity}x {productName} (R$ {totalPrice.toFixed(2)})?
             Esta ação não pode ser desfeita.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction 
+          <AlertDialogAction
             onClick={handleDelete}
             disabled={loading}
             className="bg-red-600 hover:bg-red-700"
@@ -163,4 +169,3 @@ export const DeleteSaleDialog = ({ saleId, productName, quantity, totalPrice, on
     </AlertDialog>
   );
 };
-
