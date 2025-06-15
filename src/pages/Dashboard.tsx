@@ -10,11 +10,11 @@ import { ActionCards } from '@/components/dashboard/ActionCards';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { ProductsList } from '@/components/dashboard/ProductsList';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
-import { useMobile } from '@/hooks/useMobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Dashboard = () => {
   const { user, signOut, isAdmin } = useAuth();
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
 
   const handleLogout = async () => {
     await signOut();

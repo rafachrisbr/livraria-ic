@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,8 @@ import { EditProductDialog } from '@/components/products/EditProductDialog';
 import { DeleteProductDialog } from '@/components/products/DeleteProductDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
 
 interface Product {
   id: string;
@@ -33,7 +35,7 @@ const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
 
   const handleLogout = async () => {
     await signOut();

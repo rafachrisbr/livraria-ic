@@ -28,23 +28,19 @@ export const StatsCards = () => {
   const fetchStats = async () => {
     try {
       // Buscar dados dos produtos
-      const { data: products, error: productsError } = await supabase
+      const { data: products } = await supabase
         .from('products')
         .select('price, stock_quantity, minimum_stock');
-
-      if (productsError) throw productsError;
 
       // Buscar vendas de hoje
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      const { data: todaySales, error: salesError } = await supabase
+      const { data: todaySales } = await supabase
         .from('sales')
         .select('total_price')
         .gte('sale_date', today)
         .lt('sale_date', tomorrow);
-
-      if (salesError) throw salesError;
 
       if (products) {
         const totalProducts = products.length;

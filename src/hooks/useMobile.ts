@@ -20,3 +20,9 @@ export const useMobile = () => {
 
   return { isMobile, isTablet, isDesktop: !isMobile && !isTablet };
 };
+
+// Manter compatibilidade com use-mobile.tsx
+export const useIsMobile = () => {
+  const { isMobile } = useMobile();
+  return isMobile;
+};

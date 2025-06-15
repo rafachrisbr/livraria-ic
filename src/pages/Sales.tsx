@@ -7,12 +7,12 @@ import { Link } from 'react-router-dom';
 import { AddSaleDialog } from '@/components/sales/AddSaleDialog';
 import { SalesList } from '@/components/sales/SalesList';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
-import { useMobile } from '@/hooks/useMobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Sales = () => {
   const { user, signOut } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
 
   const handleLogout = async () => {
     await signOut();
