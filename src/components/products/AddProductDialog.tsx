@@ -1,125 +1,120 @@
-
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
-import { AddCategoryDialog } from '@/components/categories/AddCategoryDialog';
-
-const productFormSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório'),
-  description: z.string().optional(),
-  price: z.string().min(1, 'Preço é obrigatório'),
-  stock_quantity: z.string().min(1, 'Quantidade é obrigatória'),
-  minimum_stock: z.string().min(1, 'Estoque mínimo é obrigatório'),
-  category_id: z.string().min(1, 'Categoria é obrigatória'),
-  image_url: z.string().url().optional().or(z.literal('')),
-  product_code: z.string().min(1, 'Código do produto é obrigatório'),
-});
-
-type ProductFormValues = z.infer<typeof productFormSchema>;
 
 interface Category {
   id: string;
   name: string;
-  description: string | null;
 }
 
 interface AddProductDialogProps {
-  onProductAdded?: () => void;
-  trigger?: React.ReactNode;
+  onProductAdded: () => void;
 }
 
-export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogProps) => {
+export const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const { toast } = useToast();
 
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productFormSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      price: '',
-      stock_quantity: '',
-      minimum_stock: '5',
-      category_id: '',
-      image_url: '',
-      product_code: '',
-    },
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    stock_quantity: '',
+    minimum_stock: '',
+    product_code: '',
+    category_id: '',
   });
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if (open) {
+      fetchCategories();
+    }
+  }, [open]);
 
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select('id, name')
         .order('name');
 
-      if (error) {
-        console.error('Error fetching categories:', error);
-        return;
-      }
-
+      if (error) throw error;
       setCategories(data || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao carregar categorias',
+        variant: 'destructive'
+      });
     }
   };
 
-  const onSubmit = async (values: ProductFormValues) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     try {
       setLoading(true);
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('products')
         .insert({
-          name: values.name,
-          description: values.description || null,
-          price: parseFloat(values.price),
-          stock_quantity: parseInt(values.stock_quantity),
-          minimum_stock: parseInt(values.minimum_stock),
-          category_id: values.category_id,
-          image_url: values.image_url || null,
-          product_code: values.product_code,
-        });
+          name: formData.name,
+          description: formData.description || null,
+          price: parseFloat(formData.price),
+          stock_quantity: parseInt(formData.stock_quantity),
+          minimum_stock: parseInt(formData.minimum_stock),
+          product_code: formData.product_code,
+          category_id: formData.category_id,
+        })
+        .select()
+        .single();
 
-      if (error) {
-        console.error('Error adding product:', error);
-        toast({
-          title: 'Erro',
-          description: 'Erro ao adicionar produto. Tente novamente.',
-          variant: 'destructive',
-        });
-        return;
-      }
+      if (error) throw error;
+
+      // Log da auditoria
+      await supabase.rpc('log_audit_action', {
+        p_action_type: 'CREATE',
+        p_table_name: 'products',
+        p_record_id: data.id,
+        p_details: {
+          name: formData.name,
+          price: parseFloat(formData.price),
+          stock_quantity: parseInt(formData.stock_quantity)
+        }
+      });
 
       toast({
         title: 'Sucesso',
-        description: 'Produto adicionado com sucesso!',
+        description: 'Produto cadastrado com sucesso!',
       });
 
-      form.reset();
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        stock_quantity: '',
+        minimum_stock: '',
+        product_code: '',
+        category_id: '',
+      });
+      
       setOpen(false);
-      onProductAdded?.();
+      onProductAdded();
     } catch (error) {
       console.error('Error adding product:', error);
       toast({
         title: 'Erro',
-        description: 'Erro inesperado ao adicionar produto.',
+        description: 'Erro ao cadastrar produto. Tente novamente.',
         variant: 'destructive',
       });
     } finally {
@@ -127,187 +122,126 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
     }
   };
 
-  const defaultTrigger = (
-    <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-      <Plus className="h-4 w-4 mr-2" />
-      Adicionar Produto
-    </Button>
-  );
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || defaultTrigger}
+        <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+          <Plus className="h-4 w-4 mr-2" />
+          Cadastrar Produto
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Adicionar Produto</DialogTitle>
+          <DialogTitle>Cadastrar Novo Produto</DialogTitle>
           <DialogDescription>
-            Preencha as informações do produto que deseja adicionar ao estoque.
+            Preencha as informações do produto abaixo.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="product_code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Código do Produto</FormLabel>
-                  <FormControl>
-                    <Input placeholder="EX: LIV001" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome do Produto</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Ex: Bíblia Sagrada"
+              required
             />
-            
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome do produto" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Descrição do produto" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Preço (R$)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <div className="space-y-2">
+            <Label htmlFor="product_code">Código do Produto</Label>
+            <Input
+              id="product_code"
+              value={formData.product_code}
+              onChange={(e) => setFormData({ ...formData, product_code: e.target.value })}
+              placeholder="Ex: BIB001"
+              required
+            />
+          </div>
 
-              <FormField
-                control={form.control}
-                name="stock_quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantidade Inicial</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+          <div className="space-y-2">
+            <Label htmlFor="category">Categoria</Label>
+            <Select 
+              value={formData.category_id} 
+              onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Descrição do produto (opcional)"
+              rows={3}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="price">Preço (R$)</Label>
+              <Input
+                id="price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                placeholder="0,00"
+                required
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="minimum_stock"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Estoque Mínimo</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="5"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="stock_quantity">Estoque Inicial</Label>
+              <Input
+                id="stock_quantity"
+                type="number"
+                min="0"
+                value={formData.stock_quantity}
+                onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+                placeholder="0"
+                required
+              />
+            </div>
+          </div>
 
-            <FormField
-              control={form.control}
-              name="category_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center justify-between">
-                    Categoria
-                    <AddCategoryDialog onCategoryAdded={fetchCategories} />
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma categoria" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
+          <div className="space-y-2">
+            <Label htmlFor="minimum_stock">Estoque Mínimo</Label>
+            <Input
+              id="minimum_stock"
+              type="number"
+              min="0"
+              value={formData.minimum_stock}
+              onChange={(e) => setFormData({ ...formData, minimum_stock: e.target.value })}
+              placeholder="5"
+              required
             />
+          </div>
 
-            <FormField
-              control={form.control}
-              name="image_url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL da Imagem (opcional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="url"
-                      placeholder="https://exemplo.com/imagem.jpg"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={loading}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Adicionando...' : 'Adicionar Produto'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Cadastrando...' : 'Cadastrar'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

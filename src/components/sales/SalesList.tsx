@@ -7,6 +7,7 @@ import { ShoppingCart, Calendar, DollarSign, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { DeleteSaleDialog } from './DeleteSaleDialog';
 
 interface Sale {
   id: string;
@@ -84,6 +85,10 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaleDeleted = () => {
+    fetchSales();
   };
 
   const getPaymentMethodLabel = (method: string) => {
@@ -185,10 +190,17 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
                     )}
                   </div>
                   
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end space-y-2">
                     <div className="text-lg font-bold text-slate-800">
                       R$ {sale.total_price.toFixed(2)}
                     </div>
+                    <DeleteSaleDialog 
+                      saleId={sale.id}
+                      productName={sale.products.name}
+                      quantity={sale.quantity}
+                      totalPrice={sale.total_price}
+                      onSaleDeleted={handleSaleDeleted}
+                    />
                   </div>
                 </div>
               </div>
