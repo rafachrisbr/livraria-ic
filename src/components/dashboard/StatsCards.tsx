@@ -1,50 +1,68 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, ShoppingCart, BarChart3, Users, TrendingDown, DollarSign } from 'lucide-react';
+import { Package, ShoppingCart, BarChart3, DollarSign, TrendingDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-interface ProductStats {
+interface StatsData {
   totalProducts: number;
   lowStockProducts: number;
   totalStockValue: number;
+  todaySales: number;
+  todayRevenue: number;
 }
 
 export const StatsCards = () => {
-  const [stats, setStats] = useState<ProductStats>({
+  const [stats, setStats] = useState<StatsData>({
     totalProducts: 0,
     lowStockProducts: 0,
     totalStockValue: 0,
+    todaySales: 0,
+    todayRevenue: 0,
   });
 
   useEffect(() => {
-    fetchProductStats();
+    fetchStats();
   }, []);
 
-  const fetchProductStats = async () => {
+  const fetchStats = async () => {
     try {
-      const { data: products, error } = await supabase
+      // Buscar dados dos produtos
+      const { data: products, error: productsError } = await supabase
         .from('products')
         .select('price, stock_quantity, minimum_stock');
 
-      if (error) {
-        console.error('Error fetching product stats:', error);
-        return;
-      }
+      if (productsError) throw productsError;
+
+      // Buscar vendas de hoje
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todaySales, error: salesError } = await supabase
+        .from('sales')
+        .select('total_price')
+        .eq('status', 'ativa')
+        .gte('sale_date', today)
+        .lt('sale_date', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+
+      if (salesError) throw salesError;
 
       if (products) {
         const totalProducts = products.length;
         const lowStockProducts = products.filter(p => p.stock_quantity <= p.minimum_stock).length;
         const totalStockValue = products.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
 
+        const todaySalesCount = todaySales?.length || 0;
+        const todayRevenueValue = todaySales?.reduce((sum, s) => sum + s.total_price, 0) || 0;
+
         setStats({
           totalProducts,
           lowStockProducts,
           totalStockValue,
+          todaySales: todaySalesCount,
+          todayRevenue: todayRevenueValue,
         });
       }
     } catch (error) {
-      console.error('Error fetching product stats:', error);
+      console.error('Error fetching stats:', error);
     }
   };
 
@@ -78,10 +96,10 @@ export const StatsCards = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-900">0</div>
+          <div className="text-2xl font-bold text-green-900">{stats.todaySales}</div>
           <p className="text-xs text-green-600 flex items-center mt-1">
             <DollarSign className="h-3 w-3 mr-1" />
-            Nenhuma venda hoje
+            R$ {stats.todayRevenue.toFixed(2)} em vendas
           </p>
         </CardContent>
       </Card>

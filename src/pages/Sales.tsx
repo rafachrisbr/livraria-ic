@@ -1,15 +1,22 @@
 
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, ShoppingCart, Plus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AddSaleDialog } from '@/components/sales/AddSaleDialog';
+import { SalesList } from '@/components/sales/SalesList';
 
 const Sales = () => {
   const { user, signOut } = useAuth();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleLogout = async () => {
     await signOut();
+  };
+
+  const handleSaleAdded = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return (
@@ -41,44 +48,10 @@ const Sales = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Venda
-          </Button>
+          <AddSaleDialog onSaleAdded={handleSaleAdded} />
         </div>
 
-        <Card className="bg-white border-slate-200 shadow-sm">
-          <CardHeader>
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-slate-100 rounded-xl">
-                <ShoppingCart className="h-6 w-6 text-slate-600" />
-              </div>
-              <div>
-                <CardTitle className="text-slate-800">Histórico de Vendas</CardTitle>
-                <CardDescription>
-                  Acompanhe todas as vendas realizadas
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-12">
-              <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                <ShoppingCart className="h-8 w-8 text-slate-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Nenhuma venda registrada
-              </h3>
-              <p className="text-gray-500 max-w-sm mx-auto mb-4">
-                Registre sua primeira venda para começar a acompanhar o movimento
-              </p>
-              <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-                <Plus className="h-4 w-4 mr-2" />
-                Registrar Primeira Venda
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <SalesList refreshTrigger={refreshTrigger} />
       </main>
     </div>
   );
