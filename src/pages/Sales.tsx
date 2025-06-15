@@ -13,8 +13,8 @@ const Sales = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-emerald-100">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -41,20 +41,20 @@ const Sales = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <Button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
+          <Button className="bg-slate-800 hover:bg-slate-900 text-white">
             <Plus className="h-4 w-4 mr-2" />
             Nova Venda
           </Button>
         </div>
 
-        <Card className="bg-gradient-to-br from-white to-green-50 shadow-lg border-0">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <div className="flex items-center space-x-3">
-              <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl">
-                <ShoppingCart className="h-6 w-6 text-white" />
+              <div className="p-3 bg-slate-100 rounded-xl">
+                <ShoppingCart className="h-6 w-6 text-slate-600" />
               </div>
               <div>
-                <CardTitle className="text-green-900">Histórico de Vendas</CardTitle>
+                <CardTitle className="text-slate-800">Histórico de Vendas</CardTitle>
                 <CardDescription>
                   Acompanhe todas as vendas realizadas
                 </CardDescription>
@@ -63,8 +63,8 @@ const Sales = () => {
           </CardHeader>
           <CardContent>
             <div className="text-center py-12">
-              <div className="mx-auto w-16 h-16 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex items-center justify-center mb-4">
-                <ShoppingCart className="h-8 w-8 text-green-500" />
+              <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                <ShoppingCart className="h-8 w-8 text-slate-500" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Nenhuma venda registrada
@@ -72,7 +72,7 @@ const Sales = () => {
               <p className="text-gray-500 max-w-sm mx-auto mb-4">
                 Registre sua primeira venda para começar a acompanhar o movimento
               </p>
-              <Button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800">
+              <Button className="bg-slate-800 hover:bg-slate-900 text-white">
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar Primeira Venda
               </Button>

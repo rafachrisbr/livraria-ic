@@ -1,22 +1,29 @@
 
 import { Calendar } from 'lucide-react';
 
-export const WelcomeSection = () => {
+interface WelcomeSectionProps {
+  userEmail?: string;
+}
+
+export const WelcomeSection = ({ userEmail }: WelcomeSectionProps) => {
+  // Extract name from email (part before @)
+  const userName = userEmail ? userEmail.split('@')[0] : 'Usuário';
+  
   return (
     <div className="mb-10">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+      <div className="bg-gradient-to-r from-slate-700 to-slate-800 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-12 -mb-12"></div>
         <div className="relative z-10">
           <h2 className="text-4xl font-bold mb-3">
-            Bem-vindo ao Sistema Administrativo
+            Bem-vindo, {userName}
           </h2>
-          <p className="text-blue-100 text-lg">
-            Gerencie produtos, vendas e relatórios da Livraria Imaculada Conceição
+          <p className="text-slate-200 text-lg">
+            Visão geral da livraria
           </p>
           <div className="flex items-center mt-4 space-x-2">
             <Calendar className="h-4 w-4" />
-            <span className="text-sm text-blue-100">
+            <span className="text-sm text-slate-200">
               {new Date().toLocaleDateString('pt-BR', { 
                 weekday: 'long', 
                 year: 'numeric', 
