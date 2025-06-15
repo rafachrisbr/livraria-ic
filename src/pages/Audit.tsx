@@ -22,7 +22,7 @@ interface AuditLog {
   administrators: {
     name: string | null;
     email: string;
-  };
+  } | null;
 }
 
 const Audit = () => {
@@ -65,7 +65,7 @@ const Audit = () => {
           record_id,
           details,
           created_at,
-          administrators:user_id (
+          administrators!inner (
             name,
             email
           )

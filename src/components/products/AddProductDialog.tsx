@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -16,9 +17,10 @@ interface Category {
 
 interface AddProductDialogProps {
   onProductAdded: () => void;
+  trigger?: React.ReactNode;
 }
 
-export const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
+export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -122,13 +124,17 @@ export const AddProductDialog = ({ onProductAdded }: AddProductDialogProps) => {
     }
   };
 
+  const defaultTrigger = (
+    <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+      <Plus className="h-4 w-4 mr-2" />
+      Cadastrar Produto
+    </Button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-          <Plus className="h-4 w-4 mr-2" />
-          Cadastrar Produto
-        </Button>
+        {trigger || defaultTrigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
