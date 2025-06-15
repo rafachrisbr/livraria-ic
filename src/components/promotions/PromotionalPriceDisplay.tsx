@@ -41,7 +41,7 @@ export const PromotionalPriceDisplay = ({
           Total com desconto: R$ {totalFinal.toFixed(2)}
         </p>
         <p className="text-sm text-green-600 font-medium">
-          Você economiza: R$ {totalDiscount.toFixed(2)}
+          Você deu desconto de: R$ {totalDiscount.toFixed(2)}
         </p>
       </div>
       
