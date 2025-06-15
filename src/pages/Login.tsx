@@ -97,16 +97,20 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
+        {/* Organization Header */}
+        <div className="text-center">
+          <h1 className="text-2xl font-light text-blue-800 mb-6 tracking-wide">
+            Fraternidade Sacerdotal São Pio X
+          </h1>
+        </div>
+
         {/* Logo Header */}
         <div className="text-center space-y-4">
           <div className="bg-white p-8 rounded-lg shadow-lg">
-            <h1 className="text-3xl font-bold text-blue-900 mb-4">
+            <h2 className="text-3xl font-bold text-blue-900 mb-4">
               Livraria Imaculada Conceição
-            </h1>
+            </h2>
             <div className="space-y-2">
-              <h2 className="text-lg text-blue-700">
-                Fraternidade Sacerdotal São Pio X
-              </h2>
               <p className="text-sm text-gray-600">
                 Capela Imaculada Conceição
               </p>
