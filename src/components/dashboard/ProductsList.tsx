@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Plus } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Package, Plus, Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -155,6 +155,14 @@ export const ProductsList = () => {
           </div>
         )}
       </CardContent>
+      <CardFooter className="border-t bg-slate-50">
+        <Link to="/inventory" className="w-full">
+          <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+            <Warehouse className="h-4 w-4 mr-2" />
+            Controle de Estoque Completo
+          </Button>
+        </Link>
+      </CardFooter>
     </Card>
   );
 };
