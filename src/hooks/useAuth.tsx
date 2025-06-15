@@ -114,6 +114,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, name?: string) => {
     try {
       setLoading(true);
+      console.log('Attempting sign up for:', email);
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -126,21 +128,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Sign up error:', error);
+        throw error;
+      }
       
-      // If signup successful and user exists, create administrator record
-      if (data.user) {
-        const { error: adminError } = await supabase
-          .from('administrators')
-          .insert({
-            user_id: data.user.id,
-            email: email,
-            name: name || ''
-          });
-        
-        if (adminError) {
-          console.error('Error creating administrator record:', adminError);
-        }
+      console.log('Sign up successful for:', data.user?.email);
+      
+      // Se o usuário foi criado com sucesso, tentar criar o registro de administrador
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('User needs email confirmation, admin record will be created after confirmation');
       }
       
       return { error: null };
