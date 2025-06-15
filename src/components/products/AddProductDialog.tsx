@@ -18,7 +18,7 @@ const productFormSchema = z.object({
   description: z.string().optional(),
   price: z.string().min(1, 'Preço é obrigatório'),
   stock_quantity: z.string().min(1, 'Quantidade é obrigatória'),
-  category: z.enum(['livros', 'artigos_religiosos', 'outros'], {
+  category: z.enum(['livros', 'artigos_religiosos'], {
     required_error: 'Categoria é obrigatória',
   }),
   image_url: z.string().url().optional().or(z.literal('')),
@@ -196,7 +196,6 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
                     <SelectContent>
                       <SelectItem value="livros">Livros</SelectItem>
                       <SelectItem value="artigos_religiosos">Artigos Religiosos</SelectItem>
-                      <SelectItem value="outros">Outros</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
