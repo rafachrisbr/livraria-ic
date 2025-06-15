@@ -29,7 +29,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [authInitialized, setAuthInitialized] = useState(false);
 
   const checkAdminStatus = async (userId: string) => {
     try {
@@ -39,9 +38,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('administrators')
         .select('id')
         .eq('user_id', userId)
-        .maybeSingle();
+        .single();
       
-      if (error) {
+      if (error && error.code !== 'PGRST116') {
         console.error('Error checking admin status:', error);
         setIsAdmin(false);
       } else {
@@ -57,42 +56,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
-    let adminCheckInProgress = false;
 
     const initializeAuth = async () => {
       try {
         console.log('Initializing auth...');
         
-        // Get initial session
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting initial session:', error);
-          if (mounted) {
-            setUser(null);
-            setSession(null);
-            setIsAdmin(false);
-            setLoading(false);
-            setAuthInitialized(true);
-          }
-          return;
         }
 
-        console.log('Initial session:', initialSession?.user?.email || 'No session');
-        
         if (mounted) {
+          console.log('Initial session:', initialSession?.user?.email || 'No session');
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
           
-          if (initialSession?.user && !adminCheckInProgress) {
-            adminCheckInProgress = true;
+          if (initialSession?.user) {
             await checkAdminStatus(initialSession.user.id);
           } else {
             setIsAdmin(false);
           }
           
           setLoading(false);
-          setAuthInitialized(true);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -101,32 +87,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(null);
           setIsAdmin(false);
           setLoading(false);
-          setAuthInitialized(true);
         }
       }
     };
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted || !authInitialized) return;
+        if (!mounted) return;
         
         console.log('Auth state change:', event, session?.user?.email || 'No session');
         
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user && !adminCheckInProgress) {
-          adminCheckInProgress = true;
-          await checkAdminStatus(session.user.id);
-          adminCheckInProgress = false;
+        if (session?.user) {
+          setTimeout(() => {
+            if (mounted) {
+              checkAdminStatus(session.user.id);
+            }
+          }, 100);
         } else {
           setIsAdmin(false);
         }
         
-        if (!session) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     );
 
@@ -145,7 +129,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       cleanupAuthState();
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -156,7 +140,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
       
-      console.log('Sign in successful:', data.user?.email);
       return { error: null };
     } catch (error: any) {
       console.error('Sign in error:', error);

@@ -1,17 +1,19 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAuthAudit = () => {
   const { user } = useAuth();
+  const hasLoggedRef = useRef(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || hasLoggedRef.current) return;
 
-    const logAuthEvent = async (action: string) => {
+    const logAuthEvent = async () => {
       try {
-        // Get IP address
+        hasLoggedRef.current = true;
+        
         let ipAddress = 'unknown';
         try {
           const ipResponse = await fetch('https://api.ipify.org?format=json');
@@ -22,19 +24,27 @@ export const useAuthAudit = () => {
         }
 
         await supabase.from('audit_logs').insert({
-          action_type: action,
+          action_type: 'SIGN_IN',
           table_name: 'auth',
           details: { email: user.email },
           user_id: user.id,
           ip_address: ipAddress,
           user_agent: navigator.userAgent,
         });
+        
+        console.log('Auth audit logged successfully');
       } catch (error) {
         console.error('Error logging auth event:', error);
       }
     };
 
-    // Log sign in event only once
-    logAuthEvent('SIGN_IN');
-  }, [user?.id]); // Only depend on user ID to avoid multiple calls
+    logAuthEvent();
+
+    // Cleanup on unmount or user change
+    return () => {
+      if (!user) {
+        hasLoggedRef.current = false;
+      }
+    };
+  }, [user?.id]);
 };

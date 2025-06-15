@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Login from './Login';
@@ -7,18 +6,18 @@ import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const { user, loading, isAdmin } = useAuth();
-  const [showContent, setShowContent] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
     console.log('Index component - User:', user?.email || 'undefined', 'Admin:', isAdmin, 'Loading:', loading);
     
-    // Only show content after loading is complete
-    if (!loading) {
-      setShowContent(true);
+    if (!loading && initialLoad) {
+      setInitialLoad(false);
     }
-  }, [user, isAdmin, loading]);
+  }, [user, isAdmin, loading, initialLoad]);
 
-  if (loading || !showContent) {
+  // Show loading while auth is initializing
+  if (loading || initialLoad) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -35,12 +34,7 @@ const Index = () => {
     return <Dashboard />;
   }
 
-  // If user is logged in but not admin, show access denied in login page
-  if (user && !isAdmin) {
-    console.log('User logged in but not admin, showing login with message');
-  }
-
-  // Otherwise show login
+  // Otherwise show login (handles both non-logged users and non-admin users)
   console.log('Showing login page');
   return <Login />;
 };
