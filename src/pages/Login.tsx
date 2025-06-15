@@ -114,7 +114,7 @@ const Login = () => {
     } else {
       toast({
         title: "Cadastro realizado com sucesso!",
-        description: "Você pode fazer login agora. A confirmação por email é opcional.",
+        description: "Verifique seu email para confirmar a conta antes de fazer login.",
       });
       setShowSignUp(false);
       setIsSignUp(false);
@@ -273,8 +273,8 @@ const Login = () => {
             {isSignUp && (
               <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                 <p className="text-xs text-blue-700">
-                  <strong>Nota:</strong> Após o cadastro, você poderá fazer login imediatamente. 
-                  A confirmação por email é opcional para melhorar a segurança.
+                  <strong>Nota:</strong> Após o cadastro, você receberá um email de confirmação. 
+                  É necessário confirmar seu email antes de poder fazer login no sistema.
                 </p>
               </div>
             )}

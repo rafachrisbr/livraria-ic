@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -75,7 +76,8 @@ export const useAuditLogs = () => {
         .from("audit_logs")
         .select(`
           id, action_type, table_name, record_id, details, created_at, user_id,
-          ip_address, user_agent, old_values, new_values
+          ip_address, user_agent, old_values, new_values,
+          administrators!inner(name, email)
         `, { count: 'exact' });
 
       // Aplicar filtros
@@ -115,12 +117,15 @@ export const useAuditLogs = () => {
 
       if (error) throw error;
 
-      // Associar administradores aos logs e corrigir tipos
+      // Mapear os logs com os dados dos administradores vindos do JOIN
       const logsWithAdmins: AuditLog[] = (logs || []).map((log) => ({
         ...log,
         ip_address: log.ip_address as string | null,
         user_agent: log.user_agent as string | null,
-        administrator: administrators.find((admin) => admin.user_id === log.user_id) || null,
+        administrator: log.administrators ? {
+          name: log.administrators.name,
+          email: log.administrators.email
+        } : null,
       }));
 
       setAuditLogs(logsWithAdmins);
@@ -174,10 +179,9 @@ export const useAuditLogs = () => {
   }, []);
 
   useEffect(() => {
-    if (administrators.length > 0) {
-      fetchAuditLogs(1);
-    }
-  }, [administrators]);
+    // Carregar logs diretamente, não precisa esperar administrators
+    fetchAuditLogs(1);
+  }, []);
 
   useEffect(() => {
     // Escuta realtime
