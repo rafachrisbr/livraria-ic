@@ -1,13 +1,14 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Package, Plus, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Package, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AddProductDialog } from '@/components/products/AddProductDialog';
+import { EditProductDialog } from '@/components/products/EditProductDialog';
+import { DeleteProductDialog } from '@/components/products/DeleteProductDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,6 +21,7 @@ interface Product {
   minimum_stock: number;
   image_url: string | null;
   category_id: string;
+  product_code: string;
   categories: {
     name: string;
   };
@@ -78,6 +80,16 @@ const Products = () => {
   const handleProductAdded = () => {
     fetchProducts();
     console.log('Produto adicionado com sucesso!');
+  };
+
+  const handleProductUpdated = () => {
+    fetchProducts();
+    console.log('Produto atualizado com sucesso!');
+  };
+
+  const handleProductDeleted = () => {
+    fetchProducts();
+    console.log('Produto excluído com sucesso!');
   };
 
   const getStockBadge = (current: number, minimum: number) => {
@@ -173,6 +185,7 @@ const Products = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Código</TableHead>
                       <TableHead>Produto</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead>Preço</TableHead>
@@ -184,6 +197,11 @@ const Products = () => {
                   <TableBody>
                     {products.map((product) => (
                       <TableRow key={product.id}>
+                        <TableCell>
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                            {product.product_code}
+                          </span>
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-3">
                             {product.image_url && (
@@ -226,12 +244,15 @@ const Products = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <EditProductDialog 
+                              product={product} 
+                              onProductUpdated={handleProductUpdated}
+                            />
+                            <DeleteProductDialog 
+                              productId={product.id}
+                              productName={product.name}
+                              onProductDeleted={handleProductDeleted}
+                            />
                           </div>
                         </TableCell>
                       </TableRow>

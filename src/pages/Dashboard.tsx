@@ -8,6 +8,7 @@ import { WelcomeSection } from '@/components/dashboard/WelcomeSection';
 import { StatsCards } from '@/components/dashboard/StatsCards';
 import { ActionCards } from '@/components/dashboard/ActionCards';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
+import { ProductsList } from '@/components/dashboard/ProductsList';
 
 const Dashboard = () => {
   const { user, signOut, isAdmin } = useAuth();
@@ -44,7 +45,10 @@ const Dashboard = () => {
         <WelcomeSection userEmail={user?.email} />
         <StatsCards />
         <ActionCards />
-        <RecentActivity />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+          <ProductsList />
+          <RecentActivity />
+        </div>
       </main>
     </div>
   );

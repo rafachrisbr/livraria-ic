@@ -11,8 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus } from 'lucide-react';
-import { AddCategoryDialog } from '@/components/categories/AddCategoryDialog';
+import { Edit } from 'lucide-react';
 
 const productFormSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -33,12 +32,24 @@ interface Category {
   description: string | null;
 }
 
-interface AddProductDialogProps {
-  onProductAdded?: () => void;
-  trigger?: React.ReactNode;
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  stock_quantity: number;
+  minimum_stock: number;
+  image_url: string | null;
+  category_id: string;
+  product_code: string;
 }
 
-export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogProps) => {
+interface EditProductDialogProps {
+  product: Product;
+  onProductUpdated: () => void;
+}
+
+export const EditProductDialog = ({ product, onProductUpdated }: EditProductDialogProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -47,20 +58,22 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      price: '',
-      stock_quantity: '',
-      minimum_stock: '5',
-      category_id: '',
-      image_url: '',
-      product_code: '',
+      name: product.name,
+      description: product.description || '',
+      price: product.price.toString(),
+      stock_quantity: product.stock_quantity.toString(),
+      minimum_stock: product.minimum_stock.toString(),
+      category_id: product.category_id,
+      image_url: product.image_url || '',
+      product_code: product.product_code,
     },
   });
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if (open) {
+      fetchCategories();
+    }
+  }, [open]);
 
   const fetchCategories = async () => {
     try {
@@ -86,7 +99,7 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
       
       const { error } = await supabase
         .from('products')
-        .insert({
+        .update({
           name: values.name,
           description: values.description || null,
           price: parseFloat(values.price),
@@ -95,13 +108,14 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
           category_id: values.category_id,
           image_url: values.image_url || null,
           product_code: values.product_code,
-        });
+        })
+        .eq('id', product.id);
 
       if (error) {
-        console.error('Error adding product:', error);
+        console.error('Error updating product:', error);
         toast({
           title: 'Erro',
-          description: 'Erro ao adicionar produto. Tente novamente.',
+          description: 'Erro ao atualizar produto. Tente novamente.',
           variant: 'destructive',
         });
         return;
@@ -109,17 +123,16 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
 
       toast({
         title: 'Sucesso',
-        description: 'Produto adicionado com sucesso!',
+        description: 'Produto atualizado com sucesso!',
       });
 
-      form.reset();
       setOpen(false);
-      onProductAdded?.();
+      onProductUpdated();
     } catch (error) {
-      console.error('Error adding product:', error);
+      console.error('Error updating product:', error);
       toast({
         title: 'Erro',
-        description: 'Erro inesperado ao adicionar produto.',
+        description: 'Erro inesperado ao atualizar produto.',
         variant: 'destructive',
       });
     } finally {
@@ -127,23 +140,18 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
     }
   };
 
-  const defaultTrigger = (
-    <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-      <Plus className="h-4 w-4 mr-2" />
-      Adicionar Produto
-    </Button>
-  );
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || defaultTrigger}
+        <Button variant="outline" size="sm">
+          <Edit className="h-4 w-4" />
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Adicionar Produto</DialogTitle>
+          <DialogTitle>Editar Produto</DialogTitle>
           <DialogDescription>
-            Preencha as informações do produto que deseja adicionar ao estoque.
+            Atualize as informações do produto.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -215,7 +223,7 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
                 name="stock_quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quantidade Inicial</FormLabel>
+                    <FormLabel>Quantidade</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -252,11 +260,8 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
               name="category_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center justify-between">
-                    Categoria
-                    <AddCategoryDialog onCategoryAdded={fetchCategories} />
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel>Categoria</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione uma categoria" />
@@ -303,7 +308,7 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
                 Cancelar
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? 'Adicionando...' : 'Adicionar Produto'}
+                {loading ? 'Atualizando...' : 'Atualizar Produto'}
               </Button>
             </DialogFooter>
           </form>
