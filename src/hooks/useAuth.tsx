@@ -39,7 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer admin check to prevent deadlocks
+          // Check admin status for any authenticated user
           setTimeout(() => {
             checkAdminStatus(session.user.id);
           }, 0);
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Checking admin status for user:', userId);
       
-      // Usar a nova função SQL para verificar se é admin
+      // Usar a função SQL para verificar se é admin
       const { data: adminCheck, error } = await supabase
         .rpc('is_user_admin', { user_id: userId });
       
@@ -129,13 +129,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log('Sign in successful:', data.user?.email);
       
-      // Force page reload after successful login
-      if (data.user) {
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
-      }
-      
+      // Don't force reload, let the auth state change handle it
       return { error: null };
     } catch (error: any) {
       console.error('Sign in error:', error);
@@ -172,6 +166,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       console.log('Sign up successful for:', data.user?.email);
       
+      // With the new trigger, user should be automatically added as admin
+      // Let the auth state change handle the flow
       return { error: null };
     } catch (error: any) {
       console.error('Sign up error:', error);

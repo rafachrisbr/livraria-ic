@@ -16,6 +16,12 @@ const Login = () => {
   const [showSignUp, setShowSignUp] = useState(false);
   const { signIn, signUp, loading, user, isAdmin } = useAuth();
 
+  // Se já está logado e é admin, redireciona para dashboard
+  if (user && isAdmin) {
+    window.location.href = '/';
+    return null;
+  }
+
   // Se já está logado e não é admin, mostra mensagem específica
   if (user && !isAdmin) {
     return (
@@ -25,6 +31,7 @@ const Login = () => {
             <CardTitle className="text-center text-red-600">Acesso Negado</CardTitle>
             <CardDescription className="text-center">
               Sua conta não possui permissões de administrador para acessar este sistema.
+              Aguarde alguns instantes enquanto verificamos suas permissões...
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -33,10 +40,10 @@ const Login = () => {
                 Usuário conectado: {user.email}
               </p>
               <Button 
-                onClick={() => window.location.href = '/'} 
-                className="w-full bg-red-600 hover:bg-red-700"
+                onClick={() => window.location.reload()} 
+                className="w-full bg-blue-600 hover:bg-blue-700"
               >
-                Tentar Novamente
+                Recarregar Página
               </Button>
             </div>
           </CardContent>
@@ -69,7 +76,7 @@ const Login = () => {
     } else {
       toast({
         title: "Login realizado com sucesso!",
-        description: "Redirecionando para o sistema...",
+        description: "Carregando sistema...",
       });
     }
   };
@@ -107,10 +114,15 @@ const Login = () => {
     } else {
       toast({
         title: "Cadastro realizado com sucesso!",
-        description: "Verifique seu email para confirmar a conta.",
+        description: "Você pode fazer login agora. A confirmação por email é opcional.",
       });
       setShowSignUp(false);
       setIsSignUp(false);
+      // Limpar campos
+      setEmail('');
+      setPassword('');
+      setName('');
+      setAccessKey('');
     }
   };
 
@@ -257,6 +269,15 @@ const Login = () => {
                 }
               </Button>
             </div>
+
+            {isSignUp && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-xs text-blue-700">
+                  <strong>Nota:</strong> Após o cadastro, você poderá fazer login imediatamente. 
+                  A confirmação por email é opcional para melhorar a segurança.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
