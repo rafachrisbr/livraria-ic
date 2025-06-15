@@ -14,7 +14,36 @@ const Login = () => {
   const [name, setName] = useState('');
   const [accessKey, setAccessKey] = useState('');
   const [showSignUp, setShowSignUp] = useState(false);
-  const { signIn, signUp, loading } = useAuth();
+  const { signIn, signUp, loading, user, isAdmin } = useAuth();
+
+  // Se já está logado e não é admin, mostra mensagem específica
+  if (user && !isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center text-red-600">Acesso Negado</CardTitle>
+            <CardDescription className="text-center">
+              Sua conta não possui permissões de administrador para acessar este sistema.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 text-center">
+                Usuário conectado: {user.email}
+              </p>
+              <Button 
+                onClick={() => window.location.href = '/'} 
+                className="w-full bg-red-600 hover:bg-red-700"
+              >
+                Tentar Novamente
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +69,7 @@ const Login = () => {
     } else {
       toast({
         title: "Login realizado com sucesso!",
-        description: "Bem-vindo ao sistema da Livraria Imaculada Conceição.",
+        description: "Redirecionando para o sistema...",
       });
     }
   };
