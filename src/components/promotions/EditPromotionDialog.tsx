@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
+import { Edit } from "lucide-react";
 
 interface Product {
   id: string;
@@ -16,28 +16,59 @@ interface Product {
   product_code: string;
 }
 
-export const AddPromotionDialog = ({ onPromotionAdded }: { onPromotionAdded: () => void }) => {
+interface Promotion {
+  id: string;
+  name: string;
+  description?: string;
+  discount_type: string;
+  discount_value: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+}
+
+export const EditPromotionDialog = ({ 
+  promotion, 
+  onPromotionUpdated 
+}: { 
+  promotion: Promotion;
+  onPromotionUpdated: () => void;
+}) => {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const [form, setForm] = useState({
-    name: "",
-    description: "",
-    discount_type: "percentage",
-    discount_value: "",
-    start_date: "",
-    end_date: ""
+    name: promotion.name,
+    description: promotion.description || "",
+    discount_type: promotion.discount_type,
+    discount_value: promotion.discount_value.toString(),
+    start_date: promotion.start_date.split('T')[0],
+    end_date: promotion.end_date.split('T')[0]
   });
 
   useEffect(() => {
-    if (open) fetchProducts();
-  }, [open]);
+    if (open) {
+      fetchProducts();
+      fetchPromotionProducts();
+    }
+  }, [open, promotion.id]);
 
   const fetchProducts = async () => {
     const { data, error } = await supabase.from("products").select("id, name, product_code").order("name");
     if (!error) setProducts(data || []);
+  };
+
+  const fetchPromotionProducts = async () => {
+    const { data, error } = await supabase
+      .from("product_promotions")
+      .select("product_id")
+      .eq("promotion_id", promotion.id);
+    
+    if (!error && data) {
+      setSelectedProducts(data.map(item => item.product_id));
+    }
   };
 
   const handleCheckbox = (id: string) => {
@@ -51,24 +82,25 @@ export const AddPromotionDialog = ({ onPromotionAdded }: { onPromotionAdded: () 
     setLoading(true);
 
     try {
-      // 1. Cadastrar promoção
-      const { data: promotion, error: promoError } = await supabase
+      // 1. Atualizar promoção
+      const { error: promoError } = await supabase
         .from("promotions")
-        .insert({
+        .update({
           name: form.name,
           description: form.description || null,
           discount_type: form.discount_type,
           discount_value: Number(form.discount_value),
           start_date: form.start_date,
           end_date: form.end_date,
-          is_active: true,
         })
-        .select()
-        .single();
+        .eq("id", promotion.id);
 
       if (promoError) throw promoError;
 
-      // 2. Associar produtos
+      // 2. Remover associações antigas
+      await supabase.from("product_promotions").delete().eq("promotion_id", promotion.id);
+
+      // 3. Adicionar novas associações
       for (const pid of selectedProducts) {
         await supabase.from("product_promotions").insert({
           product_id: pid,
@@ -76,12 +108,10 @@ export const AddPromotionDialog = ({ onPromotionAdded }: { onPromotionAdded: () 
         });
       }
 
-      toast({ title: "Promoção criada!", description: "Promoção associada aos produtos selecionados." });
+      toast({ title: "Promoção atualizada!", description: "Alterações salvas com sucesso." });
 
-      setForm({ name: "", description: "", discount_type: "percentage", discount_value: "", start_date: "", end_date: "" });
-      setSelectedProducts([]);
       setOpen(false);
-      onPromotionAdded();
+      onPromotionUpdated();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
@@ -92,35 +122,22 @@ export const AddPromotionDialog = ({ onPromotionAdded }: { onPromotionAdded: () 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-slate-800 text-white">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Promoção
+        <Button variant="outline" size="sm">
+          <Edit className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Criar Nova Promoção</DialogTitle>
-          <DialogDescription>
-            Defina os detalhes da promoção e selecione os produtos que participarão.
-          </DialogDescription>
+          <DialogTitle>Editar Promoção</DialogTitle>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <Label>Nome da Promoção</Label>
-            <Input 
-              value={form.name} 
-              onChange={e => setForm({ ...form, name: e.target.value })} 
-              placeholder="Ex: Black Friday, Liquidação de Verão"
-              required 
-            />
+            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
           </div>
           <div>
-            <Label>Descrição (opcional)</Label>
-            <Input 
-              value={form.description} 
-              onChange={e => setForm({ ...form, description: e.target.value })}
-              placeholder="Descrição da promoção"
-            />
+            <Label>Descrição</Label>
+            <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
           </div>
           <div className="flex gap-2">
             <div className="flex-1">
@@ -149,15 +166,9 @@ export const AddPromotionDialog = ({ onPromotionAdded }: { onPromotionAdded: () 
                 max={form.discount_type === "percentage" ? "100" : undefined}
                 value={form.discount_value}
                 onChange={e => setForm({ ...form, discount_value: e.target.value })}
-                placeholder={form.discount_type === "percentage" ? "Ex: 10 (para 10%)" : "Ex: 50.00"}
+                placeholder={form.discount_type === "percentage" ? "Ex: 10" : "Ex: 50.00"}
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {form.discount_type === "percentage" 
-                  ? "Digite o percentual de desconto (ex: 10 para 10%)"
-                  : "Digite o valor em reais que será descontado"
-                }
-              </p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -173,10 +184,9 @@ export const AddPromotionDialog = ({ onPromotionAdded }: { onPromotionAdded: () 
 
           <div>
             <Label>Produtos em Promoção</Label>
-            <p className="text-xs text-gray-500 mb-2">Selecione os produtos que participarão desta promoção</p>
             <div className="max-h-40 overflow-auto border rounded p-2">
               {products.map(prod => (
-                <label key={prod.id} className="flex items-center w-full py-1 hover:bg-gray-50 rounded">
+                <label key={prod.id} className="flex items-center w-full py-1">
                   <Checkbox
                     checked={selectedProducts.includes(prod.id)}
                     onCheckedChange={() => handleCheckbox(prod.id)}
@@ -190,7 +200,7 @@ export const AddPromotionDialog = ({ onPromotionAdded }: { onPromotionAdded: () 
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Criar Promoção"}</Button>
+            <Button type="submit" disabled={loading}>{loading ? "Salvando..." : "Salvar Alterações"}</Button>
           </div>
         </form>
       </DialogContent>
