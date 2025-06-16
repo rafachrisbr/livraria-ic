@@ -120,7 +120,6 @@ const Products = () => {
         <MobileHeader 
           title="Produtos" 
           subtitle="Gerenciar produtos"
-          showBackButton
         />
 
         <main className="px-4 py-6">

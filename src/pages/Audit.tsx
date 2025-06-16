@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield, ChevronLeft, ChevronRight } from "lucide-react";
@@ -41,7 +40,7 @@ const Audit = () => {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-slate-50">
-        <MobileHeader title="Auditoria" subtitle="Logs do sistema" showBackButton />
+        <MobileHeader title="Auditoria" subtitle="Logs do sistema" />
         <main className="px-4 py-6 space-y-4">
           {/* Filtros */}
           <AuditFiltersComponent

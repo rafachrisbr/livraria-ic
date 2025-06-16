@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -28,7 +27,6 @@ const Sales = () => {
         <MobileHeader 
           title="Vendas" 
           subtitle="Registrar vendas"
-          showBackButton
         />
 
         <main className="px-4 py-6">
