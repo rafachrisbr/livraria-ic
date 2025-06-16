@@ -1,10 +1,11 @@
 
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 
 export const useAuthAudit = () => {
   const { user } = useAuth();
+  const supabase = useSupabase();
   const hasLoggedRef = useRef(false);
 
   useEffect(() => {
@@ -46,5 +47,5 @@ export const useAuthAudit = () => {
         hasLoggedRef.current = false;
       }
     };
-  }, [user?.id]);
+  }, [user?.id, supabase]);
 };

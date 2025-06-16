@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useSupabase } from "@/hooks/useSupabase";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuditFilters {
@@ -37,6 +37,7 @@ interface Administrator {
 }
 
 export const useAuditLogs = () => {
+  const supabase = useSupabase();
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [administrators, setAdministrators] = useState<Administrator[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,12 +186,12 @@ export const useAuditLogs = () => {
 
   useEffect(() => {
     fetchAdministrators();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     // Carregar logs diretamente
     fetchAuditLogs(1);
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     // Escuta realtime
@@ -208,7 +209,7 @@ export const useAuditLogs = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, [currentPage, filters]);
+  }, [currentPage, filters, supabase]);
 
   return {
     auditLogs,
