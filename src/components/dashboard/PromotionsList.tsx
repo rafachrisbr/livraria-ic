@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tag, Plus, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 
 interface Promotion {
   id: string;
@@ -20,6 +20,7 @@ interface Promotion {
 export const PromotionsList = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = useSupabase();
 
   useEffect(() => {
     fetchPromotions();
@@ -36,7 +37,7 @@ export const PromotionsList = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const fetchPromotions = async () => {
     try {

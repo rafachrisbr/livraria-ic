@@ -11,7 +11,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Calendar } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/hooks/use-toast';
 import { getBestPromotionalPrice, PromotionalPrice } from '@/utils/promotionUtils';
 import { PromotionalPriceDisplay } from '@/components/promotions/PromotionalPriceDisplay';
@@ -44,6 +44,7 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isCalculatingPrice, setIsCalculatingPrice] = useState(false);
   const { toast } = useToast();
+  const supabase = useSupabase();
 
   const form = useForm<z.infer<typeof saleSchema>>({
     resolver: zodResolver(saleSchema),
@@ -115,6 +116,12 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
 
     setIsLoading(true);
     try {
+      console.log('Iniciando venda:', {
+        produto: selectedProduct.name,
+        quantidade: values.quantity,
+        estoqueAtual: selectedProduct.stock_quantity
+      });
+
       // Verificar se há estoque suficiente
       if (values.quantity > selectedProduct.stock_quantity) {
         toast({
@@ -169,6 +176,8 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
         promotion_id: promotionalPrice.hasPromotion ? promotionalPrice.promotion?.id : null
       };
 
+      console.log('Dados da venda:', saleData);
+
       const { error: saleError } = await supabase
         .from('sales')
         .insert(saleData);
@@ -178,17 +187,35 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
         throw saleError;
       }
 
+      console.log('Venda criada com sucesso, atualizando estoque...');
+
       // Atualizar o estoque do produto
       const newStockQuantity = selectedProduct.stock_quantity - values.quantity;
-      const { error: updateError } = await supabase
+      
+      console.log('Atualizando estoque:', {
+        produtoId: values.product_id,
+        estoqueAnterior: selectedProduct.stock_quantity,
+        quantidadeVendida: values.quantity,
+        novoEstoque: newStockQuantity
+      });
+
+      const { data: updateData, error: updateError } = await supabase
         .from('products')
         .update({ stock_quantity: newStockQuantity })
-        .eq('id', values.product_id);
+        .eq('id', values.product_id)
+        .select('stock_quantity');
 
       if (updateError) {
         console.error('Error updating stock:', updateError);
-        throw updateError;
+        toast({
+          title: 'Erro Critical',
+          description: 'Venda registrada, mas erro ao atualizar estoque! Verifique manualmente.',
+          variant: 'destructive'
+        });
+        return;
       }
+
+      console.log('Estoque atualizado com sucesso:', updateData);
 
       // Mostrar mensagem de sucesso com informações da promoção
       let successMessage = `Venda registrada! Estoque atualizado: ${newStockQuantity} unidades restantes.`;

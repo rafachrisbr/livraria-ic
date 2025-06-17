@@ -26,9 +26,8 @@ const ENVIRONMENTS: Record<Environment, EnvironmentConfig> = {
     anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyZWxiYnpya3RqYWRma3JpbXp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk5NDcxNzQsImV4cCI6MjA2NTUyMzE3NH0.gVISB0NGBRPDR4_U_zQoE5N5wllA3cmkROpbpsJ2Wo0"
   },
   test: {
-    // Por enquanto usando o mesmo projeto, mas você pode criar um projeto separado
-    url: "https://qrelbbzrktjadfkrimzw.supabase.co",
-    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyZWxiYnpya3RqYWRma3JpbXp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk5NDcxNzQsImV4cCI6MjA2NTUyMzE3NH0.gVISB0NGBRPDR4_U_zQoE5N5wllA3cmkROpbpsJ2Wo0"
+    url: "https://llxkpxifcaykjmdxymrk.supabase.co",
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxseGtweGlmY2F5a2ptZHh5bXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNTgzMjEsImV4cCI6MjA2NTczNDMyMX0.fxp0qKcYT0hwn9Vb5mLv4b6_iCXnJFZUL9YG4y_z_Ks"
   }
 };
 

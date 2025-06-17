@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Package, Plus, Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 
 interface Product {
   id: string;
@@ -20,6 +20,7 @@ interface Product {
 export const ProductsList = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = useSupabase();
 
   useEffect(() => {
     fetchProducts();
@@ -36,7 +37,7 @@ export const ProductsList = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const fetchProducts = async () => {
     try {

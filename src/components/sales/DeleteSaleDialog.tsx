@@ -12,7 +12,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2 } from 'lucide-react';
 
@@ -33,10 +33,13 @@ export const DeleteSaleDialog = ({
 }: DeleteSaleDialogProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const supabase = useSupabase();
 
   const handleDelete = async () => {
     setLoading(true);
     try {
+      console.log('Iniciando exclusão da venda:', saleId);
+
       // Buscar dados da venda para recuperar product_id e quantity realmente no banco
       const { data: sale, error: fetchError } = await supabase
         .from('sales')
@@ -45,6 +48,7 @@ export const DeleteSaleDialog = ({
         .maybeSingle();
 
       if (fetchError || !sale) {
+        console.error('Erro ao buscar venda:', fetchError);
         toast({
           title: 'Erro',
           description: 'Não foi possível encontrar a venda para excluir.',
@@ -53,6 +57,8 @@ export const DeleteSaleDialog = ({
         setLoading(false);
         return;
       }
+
+      console.log('Dados da venda encontrados:', sale);
 
       // Log da auditoria antes de excluir
       await supabase.rpc('log_audit_action', {
@@ -73,6 +79,7 @@ export const DeleteSaleDialog = ({
         .eq('id', saleId);
 
       if (deleteError) {
+        console.error('Erro ao excluir venda:', deleteError);
         toast({
           title: 'Erro',
           description: 'Erro ao excluir venda. Tente novamente.',
@@ -81,6 +88,8 @@ export const DeleteSaleDialog = ({
         setLoading(false);
         return;
       }
+
+      console.log('Venda excluída, atualizando estoque...');
 
       // Buscar estoque atual do produto
       const { data: product, error: productError } = await supabase
@@ -91,11 +100,22 @@ export const DeleteSaleDialog = ({
 
       if (!productError && product) {
         const updatedQty = Number(product.stock_quantity) + Number(sale.quantity);
-        const { error: updateStockError } = await supabase
+        
+        console.log('Restaurando estoque:', {
+          produtoId: sale.product_id,
+          estoqueAtual: product.stock_quantity,
+          quantidadeRestaurada: sale.quantity,
+          novoEstoque: updatedQty
+        });
+
+        const { data: updateData, error: updateStockError } = await supabase
           .from('products')
           .update({ stock_quantity: updatedQty })
-          .eq('id', sale.product_id);
+          .eq('id', sale.product_id)
+          .select('stock_quantity');
+
         if (updateStockError) {
+          console.error('Erro ao atualizar estoque:', updateStockError);
           toast({
             title: 'Erro',
             description:
@@ -106,7 +126,10 @@ export const DeleteSaleDialog = ({
           onSaleDeleted();
           return;
         }
+
+        console.log('Estoque restaurado com sucesso:', updateData);
       } else {
+        console.error('Erro ao buscar produto:', productError);
         toast({
           title: 'Erro',
           description:
@@ -120,7 +143,7 @@ export const DeleteSaleDialog = ({
 
       toast({
         title: 'Sucesso',
-        description: 'Venda excluída e estoque atualizado!',
+        description: 'Venda excluída e estoque restaurado!',
       });
 
       onSaleDeleted();
@@ -152,7 +175,7 @@ export const DeleteSaleDialog = ({
           <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
           <AlertDialogDescription>
             Tem certeza que deseja excluir a venda de {quantity}x {productName} (R$ {totalPrice.toFixed(2)})?
-            Esta ação não pode ser desfeita.
+            O estoque será restaurado automaticamente. Esta ação não pode ser desfeita.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
