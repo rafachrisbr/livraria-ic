@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, ShoppingCart, BarChart3, DollarSign, TrendingDown, Percent } from 'lucide-react';
@@ -83,7 +84,7 @@ export const StatsCards = () => {
     try {
       setLoading(true);
       
-      // Buscar vendas de hoje com verificação de erro
+      // Buscar vendas de hoje
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
@@ -97,7 +98,7 @@ export const StatsCards = () => {
         console.error('Erro ao buscar vendas:', salesError);
       }
 
-      // Buscar TODOS os produtos com verificação de erro
+      // Buscar TODOS os produtos
       const { data: allProducts, error: productsError } = await supabase
         .from('products')
         .select('id, price, stock_quantity, minimum_stock');
@@ -109,7 +110,7 @@ export const StatsCards = () => {
 
       console.log('Total de produtos encontrados:', allProducts?.length || 0);
 
-      // Buscar promoções ativas com verificação mais robusta
+      // Buscar apenas promoções ATIVAS e dentro do período válido
       const currentDate = new Date().toISOString();
       const { data: activePromotions, error: promotionsError } = await supabase
         .from('promotions')
@@ -124,17 +125,22 @@ export const StatsCards = () => {
 
       console.log('Promoções ativas encontradas:', activePromotions?.length || 0);
 
-      // Buscar associações produto-promoção com LEFT JOIN mais seguro
-      const { data: productPromotions, error: ppError } = await supabase
-        .from('product_promotions')
-        .select('product_id, promotion_id')
-        .in('promotion_id', activePromotions?.map(p => p.id) || []);
+      // Buscar associações produto-promoção apenas para promoções ativas
+      let productPromotions: any[] = [];
+      if (activePromotions && activePromotions.length > 0) {
+        const { data: ppData, error: ppError } = await supabase
+          .from('product_promotions')
+          .select('product_id, promotion_id')
+          .in('promotion_id', activePromotions.map(p => p.id));
 
-      if (ppError) {
-        console.error('Erro ao buscar associações produto-promoção:', ppError);
+        if (ppError) {
+          console.error('Erro ao buscar associações produto-promoção:', ppError);
+        } else {
+          productPromotions = ppData || [];
+        }
       }
 
-      console.log('Associações produto-promoção encontradas:', productPromotions?.length || 0);
+      console.log('Associações produto-promoção encontradas:', productPromotions.length);
 
       let totalProducts = 0;
       let lowStockProducts = 0;
@@ -161,7 +167,7 @@ export const StatsCards = () => {
           totalStockValue += originalValue;
 
           // Verificar se o produto tem promoção ativa
-          const productPromotion = productPromotions?.find(pp => pp.product_id === product.id);
+          const productPromotion = productPromotions.find(pp => pp.product_id === product.id);
           const activePromotion = productPromotion && activePromotions ? 
             activePromotions.find(p => p.id === productPromotion.promotion_id) : null;
 
@@ -178,6 +184,7 @@ export const StatsCards = () => {
             totalStockValueWithPromotions += promotionalValue;
             totalPromotionSavings += (originalValue - promotionalValue);
           } else {
+            // Se não há promoção ativa, usa o preço original
             totalStockValueWithPromotions += originalValue;
           }
         });
