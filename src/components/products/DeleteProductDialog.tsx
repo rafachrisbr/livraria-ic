@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2 } from 'lucide-react';
 
@@ -15,6 +15,7 @@ interface DeleteProductDialogProps {
 export const DeleteProductDialog = ({ productId, productName, onProductDeleted }: DeleteProductDialogProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const supabase = useSupabase();
 
   const handleDelete = async () => {
     try {

@@ -4,7 +4,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { useSupabase } from "@/hooks/useSupabase";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +22,7 @@ export const AddPromotionDialog = ({ onPromotionAdded }: { onPromotionAdded: () 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const supabase = useSupabase();
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -33,7 +34,7 @@ export const AddPromotionDialog = ({ onPromotionAdded }: { onPromotionAdded: () 
 
   useEffect(() => {
     if (open) fetchProducts();
-  }, [open]);
+  }, [open, supabase]);
 
   const fetchProducts = async () => {
     const { data, error } = await supabase.from("products").select("id, name, product_code").order("name");

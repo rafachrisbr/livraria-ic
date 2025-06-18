@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
 
@@ -28,6 +28,7 @@ export const AddCategoryDialog = ({ onCategoryAdded, trigger }: AddCategoryDialo
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const supabase = useSupabase();
 
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categoryFormSchema),

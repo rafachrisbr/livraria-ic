@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
 
@@ -25,6 +25,7 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const { toast } = useToast();
+  const supabase = useSupabase();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -40,7 +41,7 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
     if (open) {
       fetchCategories();
     }
-  }, [open]);
+  }, [open, supabase]);
 
   const fetchCategories = async () => {
     try {
