@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Trash2 } from "lucide-react";
-import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { ShoppingCart, Trash2, AlertCircle } from "lucide-react";
+import { useSalesManagement } from "@/hooks/useSalesManagement";
 import { ConfirmDeleteAllSalesDialog } from "./ConfirmDeleteAllSalesDialog";
 import { useSupabase } from "@/hooks/useSupabase";
 
@@ -24,14 +24,17 @@ interface Sale {
 }
 
 export const SalesManagementCard = () => {
-  const { loading, deleteAllSales, deleteSale } = useSuperAdmin();
+  const { loading, deleteAllSales, deleteSale } = useSalesManagement();
   const supabase = useSupabase();
   const [sales, setSales] = useState<Sale[]>([]);
   const [salesLoading, setSalesLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchSales = async () => {
     try {
       setSalesLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('sales')
         .select(`
@@ -42,10 +45,15 @@ export const SalesManagementCard = () => {
         .order('sale_date', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching sales:', error);
+        throw error;
+      }
+      
       setSales(data || []);
-    } catch (error) {
-      console.error('Erro ao buscar vendas:', error);
+    } catch (error: any) {
+      console.error('Error in fetchSales:', error);
+      setError('Erro ao carregar vendas. Verifique as permissões.');
     } finally {
       setSalesLoading(false);
     }
@@ -81,6 +89,30 @@ export const SalesManagementCard = () => {
     }).format(value);
   };
 
+  if (error) {
+    return (
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-red-800">
+            <AlertCircle className="h-6 w-6" />
+            <span>Erro no Gerenciamento de Vendas</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={() => {
+              setError(null);
+              fetchSales();
+            }} variant="outline">
+              Tentar Novamente
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="border-red-200">
       <CardHeader>
@@ -89,7 +121,7 @@ export const SalesManagementCard = () => {
           <span>Gerenciamento de Vendas</span>
         </CardTitle>
         <CardDescription>
-          Visualize e gerencie todas as vendas do sistema - delete vendas específicas ou todas
+          Visualize e gerencie todas as vendas do sistema
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -106,7 +138,7 @@ export const SalesManagementCard = () => {
         </div>
 
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {sales.length === 0 ? (
+          {sales.length === 0 && !salesLoading ? (
             <div className="text-center py-8 text-gray-500">
               Nenhuma venda encontrada
             </div>
