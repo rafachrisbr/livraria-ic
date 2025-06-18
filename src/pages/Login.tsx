@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ const Login = () => {
   const [name, setName] = useState('');
   const [accessKey, setAccessKey] = useState('');
   const [showSignUp, setShowSignUp] = useState(false);
-  const { signIn, signUp, loading, user, isAdmin } = useAuth();
+  const { signIn, signUp, loading, user, isAdmin, checkingAdmin } = useAuth();
 
   // Se já está logado e é admin, redireciona para página de boas-vindas
   if (user && isAdmin) {
@@ -23,7 +22,7 @@ const Login = () => {
   }
 
   // Se já está logado mas ainda verificando status de admin, mostra loading
-  if (user && loading) {
+  if (user && (loading || checkingAdmin)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -45,7 +44,7 @@ const Login = () => {
   }
 
   // Se já está logado e não é admin (após verificação completa), mostra mensagem específica
-  if (user && !loading && !isAdmin) {
+  if (user && !loading && !checkingAdmin && !isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -265,9 +264,9 @@ const Login = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={loading}
+                disabled={loading || checkingAdmin}
               >
-                {loading ? (
+                {loading || checkingAdmin ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {isSignUp ? 'Cadastrando...' : 'Entrando...'}

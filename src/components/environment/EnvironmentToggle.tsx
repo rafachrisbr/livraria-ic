@@ -10,10 +10,9 @@ import { Loader2 } from 'lucide-react';
 
 export const EnvironmentToggle = () => {
   const { environment, setEnvironment, isTestMode } = useEnvironment();
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isChanging, setIsChanging] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingEnvironment, setPendingEnvironment] = useState<'test' | 'production' | null>(null);
 
@@ -27,45 +26,50 @@ export const EnvironmentToggle = () => {
 
   const handleToggleClick = (checked: boolean) => {
     const newEnv = checked ? 'test' : 'production';
+    
+    // Se já está no ambiente correto, não fazer nada
+    if (newEnv === environment) {
+      return;
+    }
+    
     setPendingEnvironment(newEnv);
     setShowConfirmDialog(true);
   };
 
-  const handleConfirmChange = () => {
+  const handleConfirmChange = async () => {
     if (!pendingEnvironment) return;
 
     setShowConfirmDialog(false);
     setIsChanging(true);
 
-    // Tentar preservar a sessão salvando dados relevantes no localStorage
-    if (session) {
-      localStorage.setItem('temp_session_backup', JSON.stringify({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-        user_email: user?.email,
-        expires_at: session.expires_at
-      }));
-    }
-
-    setEnvironment(pendingEnvironment);
-    
-    toast({
-      title: `Conectando ao ambiente ${pendingEnvironment === 'test' ? 'de Teste' : 'de Produção'}`,
-      description: 'Mantendo sua sessão ativa durante a mudança...',
-    });
-
-    // Iniciar countdown visual
-    setCountdown(3);
-    const countdownInterval = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          window.location.reload();
-          return 0;
-        }
-        return prev - 1;
+    try {
+      toast({
+        title: `Conectando ao ambiente ${pendingEnvironment === 'test' ? 'de Teste' : 'de Produção'}`,
+        description: 'Mantendo sua sessão ativa durante a mudança...',
       });
-    }, 1000);
+
+      // Aguardar um pouco para o toast aparecer
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Mudar ambiente sem reload - o contexto gerenciará a transição
+      setEnvironment(pendingEnvironment);
+
+      toast({
+        title: `Conectado ao ambiente ${pendingEnvironment === 'test' ? 'de Teste' : 'de Produção'}`,
+        description: 'Ambiente alterado com sucesso!',
+      });
+
+    } catch (error) {
+      console.error('Erro ao trocar ambiente:', error);
+      toast({
+        title: 'Erro ao trocar ambiente',
+        description: 'Ocorreu um erro durante a troca. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsChanging(false);
+      setPendingEnvironment(null);
+    }
   };
 
   const handleCancelChange = () => {
@@ -80,11 +84,6 @@ export const EnvironmentToggle = () => {
         <span className="text-sm text-blue-700 font-medium">
           Conectando ao ambiente {pendingEnvironment === 'test' ? 'de teste' : 'de produção'}...
         </span>
-        {countdown > 0 && (
-          <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
-            {countdown}s
-          </span>
-        )}
       </div>
     );
   }
@@ -110,7 +109,7 @@ export const EnvironmentToggle = () => {
             <AlertDialogDescription>
               Você está prestes a mudar para o ambiente {pendingEnvironment === 'test' ? 'de Teste' : 'de Produção'}.
               <br /><br />
-              A página será recarregada para conectar ao banco de dados correto, mas sua sessão será mantida.
+              O sistema irá conectar ao banco de dados correspondente mantendo sua sessão ativa.
               <br /><br />
               Deseja continuar?
             </AlertDialogDescription>

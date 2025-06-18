@@ -15,6 +15,7 @@ interface EnvironmentContextType {
   setEnvironment: (env: Environment) => void;
   supabaseClient: SupabaseClient<Database>;
   isTestMode: boolean;
+  isTransitioning: boolean;
 }
 
 const EnvironmentContext = createContext<EnvironmentContextType | undefined>(undefined);
@@ -39,35 +40,67 @@ export const EnvironmentProvider = ({ children }: { children: ReactNode }) => {
 
   const [supabaseClient, setSupabaseClient] = useState<SupabaseClient<Database>>(() => {
     const config = ENVIRONMENTS[environment];
-    return createClient<Database>(config.url, config.anonKey);
+    return createClient<Database>(config.url, config.anonKey, {
+      auth: {
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true,
+      }
+    });
   });
 
-  const setEnvironment = (env: Environment) => {
-    console.log(`Mudando ambiente para: ${env}`);
-    setEnvironmentState(env);
-    localStorage.setItem('environment', env);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  const setEnvironment = async (env: Environment) => {
+    if (env === environment) return;
     
-    // Criar novo cliente Supabase
-    const config = ENVIRONMENTS[env];
-    const newClient = createClient<Database>(config.url, config.anonKey);
-    setSupabaseClient(newClient);
+    setIsTransitioning(true);
+    console.log(`Iniciando mudança para ambiente: ${env}`);
     
-    console.log(`Cliente Supabase atualizado para ${env}: ${config.url}`);
+    try {
+      // Salvar ambiente no localStorage
+      localStorage.setItem('environment', env);
+      
+      // Criar novo cliente Supabase
+      const config = ENVIRONMENTS[env];
+      const newClient = createClient<Database>(config.url, config.anonKey, {
+        auth: {
+          storage: localStorage,
+          persistSession: true,
+          autoRefreshToken: true,
+        }
+      });
+
+      // Atualizar estado
+      setEnvironmentState(env);
+      setSupabaseClient(newClient);
+      
+      console.log(`Cliente Supabase atualizado para ${env}: ${config.url}`);
+      
+      // Pequena pausa para garantir que a mudança foi processada
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+    } catch (error) {
+      console.error('Erro ao trocar ambiente:', error);
+    } finally {
+      setIsTransitioning(false);
+    }
   };
 
+  // Sinalizar para o AuthProvider quando o ambiente mudar
   useEffect(() => {
-    // Atualizar cliente quando ambiente mudar
-    const config = ENVIRONMENTS[environment];
-    const newClient = createClient<Database>(config.url, config.anonKey);
-    setSupabaseClient(newClient);
-    console.log(`Ambiente carregado: ${environment}`);
-  }, [environment]);
+    // Disparar evento customizado para notificar mudança de ambiente
+    window.dispatchEvent(new CustomEvent('environmentChanged', { 
+      detail: { environment, supabaseClient } 
+    }));
+  }, [environment, supabaseClient]);
 
   const value = {
     environment,
     setEnvironment,
     supabaseClient,
-    isTestMode: environment === 'test'
+    isTestMode: environment === 'test',
+    isTransitioning
   };
 
   return (

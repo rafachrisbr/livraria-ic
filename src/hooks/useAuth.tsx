@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useSupabase } from '@/hooks/useSupabase';
@@ -8,6 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  checkingAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -29,10 +29,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [checkingAdmin, setCheckingAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const checkAdminStatus = async (userId: string) => {
+  const checkAdminStatus = async (userId: string, forceRecheck = false) => {
+    if (checkingAdmin && !forceRecheck) return;
+    
     try {
+      setCheckingAdmin(true);
       console.log('Checking admin status for user:', userId);
       
       const { data: adminData, error } = await supabase
@@ -52,36 +56,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Error in checkAdminStatus:', error);
       setIsAdmin(false);
+    } finally {
+      setCheckingAdmin(false);
     }
   };
 
-  const tryRestoreSession = async () => {
-    const backupData = localStorage.getItem('temp_session_backup');
-    if (backupData) {
-      try {
-        const backup = JSON.parse(backupData);
-        console.log('Tentando restaurar sessão do usuário:', backup.user_email);
-        
-        // Tentar usar refresh token para restaurar sessão
-        if (backup.refresh_token) {
-          const { data, error } = await supabase.auth.setSession({
-            access_token: backup.access_token,
-            refresh_token: backup.refresh_token
-          });
-          
-          if (data.session && !error) {
-            console.log('Sessão restaurada com sucesso!');
-            localStorage.removeItem('temp_session_backup');
-            return true;
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao restaurar sessão:', error);
+  // Reagir a mudanças de ambiente
+  useEffect(() => {
+    const handleEnvironmentChange = (event: CustomEvent) => {
+      console.log('Environment changed, rechecking admin status...');
+      if (user) {
+        // Re-verificar status de admin com novo cliente
+        checkAdminStatus(user.id, true);
       }
-      localStorage.removeItem('temp_session_backup');
-    }
-    return false;
-  };
+    };
+
+    window.addEventListener('environmentChanged', handleEnvironmentChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('environmentChanged', handleEnvironmentChange as EventListener);
+    };
+  }, [user]);
 
   useEffect(() => {
     let mounted = true;
@@ -90,29 +85,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         console.log('Initializing auth...');
         
-        // Primeiro, tentar restaurar sessão se houver backup
-        const sessionRestored = await tryRestoreSession();
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
-        if (!sessionRestored) {
-          const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            console.error('Error getting initial session:', error);
-          }
+        if (error) {
+          console.error('Error getting initial session:', error);
+        }
 
-          if (mounted) {
-            console.log('Initial session:', initialSession?.user?.email || 'No session');
-            setSession(initialSession);
-            setUser(initialSession?.user ?? null);
-            
-            if (initialSession?.user) {
-              await checkAdminStatus(initialSession.user.id);
-            } else {
-              setIsAdmin(false);
-            }
-            
-            setLoading(false);
+        if (mounted) {
+          console.log('Initial session:', initialSession?.user?.email || 'No session');
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+          
+          if (initialSession?.user) {
+            await checkAdminStatus(initialSession.user.id);
+          } else {
+            setIsAdmin(false);
           }
+          
+          setLoading(false);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -244,6 +234,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     user,
     session,
     loading,
+    checkingAdmin,
     signIn,
     signUp,
     signOut,
