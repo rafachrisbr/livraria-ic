@@ -39,28 +39,64 @@ export const DeleteSaleDialog = ({
     try {
       console.log('Iniciando exclusão da venda:', saleId);
 
-      // Buscar dados da venda para recuperar product_id e quantity realmente no banco
+      // Buscar dados da venda para recuperar product_id e quantity
       const { data: sale, error: fetchError } = await supabase
         .from('sales')
         .select('product_id, quantity')
         .eq('id', saleId)
         .maybeSingle();
 
-      if (fetchError || !sale) {
+      if (fetchError) {
         console.error('Erro ao buscar venda:', fetchError);
         toast({
           title: 'Erro',
           description: 'Não foi possível encontrar a venda para excluir.',
           variant: 'destructive',
         });
-        setLoading(false);
+        return;
+      }
+
+      if (!sale) {
+        console.error('Venda não encontrada');
+        toast({
+          title: 'Erro',
+          description: 'Venda não encontrada.',
+          variant: 'destructive',
+        });
         return;
       }
 
       console.log('Dados da venda encontrados:', sale);
 
+      // Buscar estoque atual do produto ANTES de excluir
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('stock_quantity')
+        .eq('id', sale.product_id)
+        .maybeSingle();
+
+      if (productError || !product) {
+        console.error('Erro ao buscar produto:', productError);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível encontrar o produto para atualizar estoque.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Calcular novo estoque
+      const updatedQty = Number(product.stock_quantity) + Number(sale.quantity);
+      
+      console.log('Preparando para restaurar estoque:', {
+        produtoId: sale.product_id,
+        estoqueAtual: product.stock_quantity,
+        quantidadeRestaurada: sale.quantity,
+        novoEstoque: updatedQty
+      });
+
       // Log manual da auditoria antes de excluir
-      await supabase.from('audit_logs').insert({
+      const { error: auditError } = await supabase.from('audit_logs').insert({
         action_type: 'DELETE',
         table_name: 'sales',
         record_id: saleId,
@@ -72,7 +108,29 @@ export const DeleteSaleDialog = ({
         user_id: (await supabase.auth.getUser()).data.user?.id || ''
       });
 
-      // Excluir a venda
+      if (auditError) {
+        console.warn('Erro ao criar log de auditoria:', auditError);
+      }
+
+      // Usar uma transação simulada: primeiro atualizar estoque, depois excluir venda
+      const { error: updateStockError } = await supabase
+        .from('products')
+        .update({ stock_quantity: updatedQty })
+        .eq('id', sale.product_id);
+
+      if (updateStockError) {
+        console.error('Erro ao atualizar estoque:', updateStockError);
+        toast({
+          title: 'Erro',
+          description: 'Erro ao restaurar estoque. Operação cancelada.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Estoque restaurado, procedendo com exclusão da venda...');
+
+      // Agora excluir a venda
       const { error: deleteError } = await supabase
         .from('sales')
         .delete()
@@ -80,73 +138,33 @@ export const DeleteSaleDialog = ({
 
       if (deleteError) {
         console.error('Erro ao excluir venda:', deleteError);
-        toast({
-          title: 'Erro',
-          description: 'Erro ao excluir venda. Tente novamente.',
-          variant: 'destructive',
-        });
-        setLoading(false);
-        return;
-      }
-
-      console.log('Venda excluída, atualizando estoque...');
-
-      // Buscar estoque atual do produto
-      const { data: product, error: productError } = await supabase
-        .from('products')
-        .select('stock_quantity')
-        .eq('id', sale.product_id)
-        .maybeSingle();
-
-      if (!productError && product) {
-        const updatedQty = Number(product.stock_quantity) + Number(sale.quantity);
         
-        console.log('Restaurando estoque:', {
-          produtoId: sale.product_id,
-          estoqueAtual: product.stock_quantity,
-          quantidadeRestaurada: sale.quantity,
-          novoEstoque: updatedQty
-        });
-
-        const { data: updateData, error: updateStockError } = await supabase
+        // Reverter a atualização do estoque
+        await supabase
           .from('products')
-          .update({ stock_quantity: updatedQty })
-          .eq('id', sale.product_id)
-          .select('stock_quantity');
-
-        if (updateStockError) {
-          console.error('Erro ao atualizar estoque:', updateStockError);
-          toast({
-            title: 'Erro',
-            description:
-              'Venda excluída, mas não foi possível atualizar o estoque do produto!',
-            variant: 'destructive',
-          });
-          setLoading(false);
-          onSaleDeleted();
-          return;
-        }
-
-        console.log('Estoque restaurado com sucesso:', updateData);
-      } else {
-        console.error('Erro ao buscar produto:', productError);
+          .update({ stock_quantity: product.stock_quantity })
+          .eq('id', sale.product_id);
+        
         toast({
           title: 'Erro',
-          description:
-            'Venda excluída, mas não foi possível encontrar o produto para atualizar estoque!',
+          description: 'Erro ao excluir venda. Estoque foi revertido.',
           variant: 'destructive',
         });
-        setLoading(false);
-        onSaleDeleted();
         return;
       }
+
+      console.log('Venda excluída com sucesso');
 
       toast({
         title: 'Sucesso',
-        description: 'Venda excluída e estoque restaurado!',
+        description: 'Venda excluída e estoque restaurado com sucesso!',
       });
 
-      onSaleDeleted();
+      // Aguardar um momento antes de notificar para evitar race conditions
+      setTimeout(() => {
+        onSaleDeleted();
+      }, 500);
+
     } catch (error) {
       console.error('Error deleting sale:', error);
       toast({

@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, ShoppingCart, BarChart3, DollarSign, TrendingDown, Percent } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +23,15 @@ export const StatsCards = () => {
     todaySales: 0,
     todayRevenue: 0,
   });
+  const [loading, setLoading] = useState(false);
+
+  // Debounce para evitar múltiplas execuções simultâneas
+  const debouncedFetchStats = useCallback(() => {
+    const timeoutId = setTimeout(() => {
+      fetchStats();
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   useEffect(() => {
     fetchStats();
@@ -33,7 +41,7 @@ export const StatsCards = () => {
       .channel('stats-products-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'products' }, 
-        () => fetchStats()
+        () => debouncedFetchStats()
       )
       .subscribe();
 
@@ -41,7 +49,7 @@ export const StatsCards = () => {
       .channel('stats-sales-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'sales' }, 
-        () => fetchStats()
+        () => debouncedFetchStats()
       )
       .subscribe();
 
@@ -49,7 +57,15 @@ export const StatsCards = () => {
       .channel('stats-promotions-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'promotions' }, 
-        () => fetchStats()
+        () => debouncedFetchStats()
+      )
+      .subscribe();
+
+    const productPromotionsChannel = supabase
+      .channel('stats-product-promotions-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'product_promotions' }, 
+        () => debouncedFetchStats()
       )
       .subscribe();
 
@@ -57,43 +73,66 @@ export const StatsCards = () => {
       productsChannel.unsubscribe();
       salesChannel.unsubscribe();
       promotionsChannel.unsubscribe();
+      productPromotionsChannel.unsubscribe();
     };
-  }, []);
+  }, [debouncedFetchStats]);
 
   const fetchStats = async () => {
+    if (loading) return; // Evitar execuções simultâneas
+    
     try {
-      // Buscar vendas de hoje
+      setLoading(true);
+      
+      // Buscar vendas de hoje com verificação de erro
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
-      const { data: todaySales } = await supabase
+      const { data: todaySales, error: salesError } = await supabase
         .from('sales')
         .select('total_price')
         .gte('sale_date', today)
         .lt('sale_date', tomorrow);
 
-      // Buscar TODOS os produtos
-      const { data: allProducts } = await supabase
+      if (salesError) {
+        console.error('Erro ao buscar vendas:', salesError);
+      }
+
+      // Buscar TODOS os produtos com verificação de erro
+      const { data: allProducts, error: productsError } = await supabase
         .from('products')
         .select('id, price, stock_quantity, minimum_stock');
 
+      if (productsError) {
+        console.error('Erro ao buscar produtos:', productsError);
+        throw productsError;
+      }
+
       console.log('Total de produtos encontrados:', allProducts?.length || 0);
 
-      // Buscar todas as promoções ativas
+      // Buscar promoções ativas com verificação mais robusta
       const currentDate = new Date().toISOString();
-      const { data: activePromotions } = await supabase
+      const { data: activePromotions, error: promotionsError } = await supabase
         .from('promotions')
         .select('id, discount_type, discount_value, start_date, end_date')
         .eq('is_active', true)
         .lte('start_date', currentDate)
         .gte('end_date', currentDate);
 
+      if (promotionsError) {
+        console.error('Erro ao buscar promoções:', promotionsError);
+      }
+
       console.log('Promoções ativas encontradas:', activePromotions?.length || 0);
 
-      // Buscar associações produto-promoção
-      const { data: productPromotions } = await supabase
+      // Buscar associações produto-promoção com LEFT JOIN mais seguro
+      const { data: productPromotions, error: ppError } = await supabase
         .from('product_promotions')
-        .select('product_id, promotion_id');
+        .select('product_id, promotion_id')
+        .in('promotion_id', activePromotions?.map(p => p.id) || []);
+
+      if (ppError) {
+        console.error('Erro ao buscar associações produto-promoção:', ppError);
+      }
 
       console.log('Associações produto-promoção encontradas:', productPromotions?.length || 0);
 
@@ -103,12 +142,18 @@ export const StatsCards = () => {
       let totalStockValueWithPromotions = 0;
       let totalPromotionSavings = 0;
 
-      if (allProducts) {
+      if (allProducts && Array.isArray(allProducts)) {
         totalProducts = allProducts.length;
         
         allProducts.forEach(product => {
+          // Verificações de segurança
+          if (!product || typeof product.price !== 'number' || typeof product.stock_quantity !== 'number') {
+            console.warn('Produto com dados inválidos encontrado:', product);
+            return;
+          }
+
           // Verificar estoque baixo
-          if (product.stock_quantity <= product.minimum_stock) {
+          if (product.stock_quantity <= (product.minimum_stock || 0)) {
             lowStockProducts++;
           }
 
@@ -117,10 +162,10 @@ export const StatsCards = () => {
 
           // Verificar se o produto tem promoção ativa
           const productPromotion = productPromotions?.find(pp => pp.product_id === product.id);
-          const activePromotion = productPromotion ? 
-            activePromotions?.find(p => p.id === productPromotion.promotion_id) : null;
+          const activePromotion = productPromotion && activePromotions ? 
+            activePromotions.find(p => p.id === productPromotion.promotion_id) : null;
 
-          if (activePromotion) {
+          if (activePromotion && activePromotion.discount_type && typeof activePromotion.discount_value === 'number') {
             let discountedPrice = product.price;
             
             if (activePromotion.discount_type === 'percentage') {
@@ -139,7 +184,9 @@ export const StatsCards = () => {
       }
 
       const todaySalesCount = todaySales?.length || 0;
-      const todayRevenueValue = todaySales?.reduce((sum, s) => sum + s.total_price, 0) || 0;
+      const todayRevenueValue = todaySales?.reduce((sum, s) => {
+        return sum + (typeof s.total_price === 'number' ? s.total_price : 0);
+      }, 0) || 0;
 
       console.log('Estatísticas calculadas:', {
         totalProducts,
@@ -161,38 +208,69 @@ export const StatsCards = () => {
     } catch (error) {
       console.error('Error fetching stats:', error);
       
-      // Em caso de erro, buscar apenas dados básicos
-      const { data: basicProducts } = await supabase
-        .from('products')
-        .select('price, stock_quantity, minimum_stock');
+      // Em caso de erro, buscar apenas dados básicos dos produtos
+      try {
+        const { data: basicProducts, error: basicError } = await supabase
+          .from('products')
+          .select('price, stock_quantity, minimum_stock');
 
-      const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      
-      const { data: todaySalesData } = await supabase
-        .from('sales')
-        .select('total_price')
-        .gte('sale_date', today)
-        .lt('sale_date', tomorrow);
+        if (basicError) {
+          console.error('Erro ao buscar dados básicos:', basicError);
+          return;
+        }
 
-      if (basicProducts) {
-        const totalProducts = basicProducts.length;
-        const lowStockProducts = basicProducts.filter(p => p.stock_quantity <= p.minimum_stock).length;
-        const totalStockValue = basicProducts.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        const { data: todaySalesData } = await supabase
+          .from('sales')
+          .select('total_price')
+          .gte('sale_date', today)
+          .lt('sale_date', tomorrow);
 
-        const todaySalesCount = todaySalesData?.length || 0;
-        const todayRevenueValue = todaySalesData?.reduce((sum, s) => sum + s.total_price, 0) || 0;
+        if (basicProducts && Array.isArray(basicProducts)) {
+          const totalProducts = basicProducts.length;
+          const lowStockProducts = basicProducts.filter(p => 
+            p && typeof p.stock_quantity === 'number' && typeof p.minimum_stock === 'number' &&
+            p.stock_quantity <= p.minimum_stock
+          ).length;
+          const totalStockValue = basicProducts.reduce((sum, p) => {
+            if (p && typeof p.price === 'number' && typeof p.stock_quantity === 'number') {
+              return sum + (p.price * p.stock_quantity);
+            }
+            return sum;
+          }, 0);
 
+          const todaySalesCount = todaySalesData?.length || 0;
+          const todayRevenueValue = todaySalesData?.reduce((sum, s) => {
+            return sum + (typeof s.total_price === 'number' ? s.total_price : 0);
+          }, 0) || 0;
+
+          setStats({
+            totalProducts,
+            lowStockProducts,
+            totalStockValue,
+            totalStockValueWithPromotions: totalStockValue,
+            totalPromotionSavings: 0,
+            todaySales: todaySalesCount,
+            todayRevenue: todayRevenueValue,
+          });
+        }
+      } catch (fallbackError) {
+        console.error('Erro no fallback:', fallbackError);
+        // Manter stats em estado seguro
         setStats({
-          totalProducts,
-          lowStockProducts,
-          totalStockValue,
-          totalStockValueWithPromotions: totalStockValue,
+          totalProducts: 0,
+          lowStockProducts: 0,
+          totalStockValue: 0,
+          totalStockValueWithPromotions: 0,
           totalPromotionSavings: 0,
-          todaySales: todaySalesCount,
-          todayRevenue: todayRevenueValue,
+          todaySales: 0,
+          todayRevenue: 0,
         });
       }
+    } finally {
+      setLoading(false);
     }
   };
 
