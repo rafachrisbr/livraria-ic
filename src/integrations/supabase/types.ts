@@ -296,6 +296,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_all_sales: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      delete_user_by_id: {
+        Args: { user_id_to_delete: string }
+        Returns: boolean
+      }
+      get_all_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          created_at: string
+          last_sign_in_at: string
+          is_admin: boolean
+        }[]
+      }
       is_user_admin: {
         Args: { user_id: string }
         Returns: boolean

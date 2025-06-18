@@ -118,6 +118,28 @@ export const ActionCards = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* SUPER ADMIN - Apenas para Rafael */}
+      {isRafael && (
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 order-6">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-purple-800">
+              <Shield className="h-5 w-5" />
+              <span>Super Admin</span>
+            </CardTitle>
+            <CardDescription className="text-purple-600">
+              Configurações avançadas do sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/super-admin">
+              <Button className="w-full bg-purple-600 hover:bg-purple-700">
+                Configurações
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
