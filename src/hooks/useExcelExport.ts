@@ -1,6 +1,7 @@
 
 import { utils, writeFileXLSX } from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDateOnlyToBrazil } from '@/utils/dateUtils';
 
 export const useExcelExport = () => {
   const exportReportsToExcel = async () => {
@@ -48,7 +49,7 @@ export const useExcelExport = () => {
       })) || [];
 
       const salesData = sales?.map(sale => ({
-        'Data': new Date(sale.sale_date).toLocaleDateString('pt-BR'),
+        'Data': formatDateOnlyToBrazil(sale.sale_date),
         'Produto': sale.products?.name || 'N/A',
         'Código do Produto': sale.products?.product_code || 'N/A',
         'Quantidade': sale.quantity,
@@ -119,9 +120,10 @@ export const useExcelExport = () => {
       utils.book_append_sheet(workbook, productSalesSheet, 'Produtos Mais Vendidos');
       utils.book_append_sheet(workbook, paymentMethodsSheet, 'Vendas por Pagamento');
 
-      // Gerar nome do arquivo com data atual
+      // Gerar nome do arquivo com data atual no horário do Brasil
       const now = new Date();
-      const fileName = `relatorio_livraria_${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}.xlsx`;
+      const brazilDate = formatDateOnlyToBrazil(now).replace(/\//g, '-');
+      const fileName = `relatorio_livraria_${brazilDate}.xlsx`;
 
       // Baixar arquivo
       writeFileXLSX(workbook, fileName);

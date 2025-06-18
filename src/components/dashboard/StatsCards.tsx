@@ -84,9 +84,11 @@ export const StatsCards = () => {
     try {
       setLoading(true);
       
-      // Buscar vendas de hoje
-      const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      // Buscar vendas de hoje usando o timezone do Brasil
+      const now = new Date();
+      const brazilToday = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      const today = brazilToday.toISOString().split('T')[0];
+      const tomorrow = new Date(brazilToday.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
       const { data: todaySales, error: salesError } = await supabase
         .from('sales')
