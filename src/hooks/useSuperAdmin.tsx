@@ -105,11 +105,19 @@ export const useSuperAdmin = () => {
 
       if (saleError) throw saleError;
 
-      // Restaurar estoque
+      // Restaurar estoque manualmente
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('stock_quantity')
+        .eq('id', sale.product_id)
+        .single();
+
+      if (productError) throw productError;
+
       const { error: stockError } = await supabase
         .from('products')
         .update({ 
-          stock_quantity: supabase.raw('stock_quantity + ?', [sale.quantity])
+          stock_quantity: product.stock_quantity + sale.quantity
         })
         .eq('id', sale.product_id);
 
