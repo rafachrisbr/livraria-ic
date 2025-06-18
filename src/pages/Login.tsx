@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -21,8 +22,30 @@ const Login = () => {
     return null;
   }
 
-  // Se já está logado e não é admin, mostra mensagem específica
-  if (user && !isAdmin) {
+  // Se já está logado mas ainda verificando status de admin, mostra loading
+  if (user && loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center text-blue-600">Verificando Permissões</CardTitle>
+            <CardDescription className="text-center">
+              Verificando suas permissões de administrador...
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center space-x-2">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              <span className="text-sm text-gray-600">Carregando...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Se já está logado e não é admin (após verificação completa), mostra mensagem específica
+  if (user && !loading && !isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -30,7 +53,6 @@ const Login = () => {
             <CardTitle className="text-center text-red-600">Acesso Negado</CardTitle>
             <CardDescription className="text-center">
               Sua conta não possui permissões de administrador para acessar este sistema.
-              Aguarde alguns instantes enquanto verificamos suas permissões...
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -75,9 +97,8 @@ const Login = () => {
     } else {
       toast({
         title: "Login realizado com sucesso!",
-        description: "Redirecionando...",
+        description: "Verificando permissões...",
       });
-      // Redirecionar para página de boas-vindas será feito pelo useEffect acima
     }
   };
 
