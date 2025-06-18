@@ -50,31 +50,31 @@ export const ConfirmDeleteAllSalesDialog = ({ onConfirm, loading }: ConfirmDelet
             <AlertTriangle className="h-5 w-5" />
             {step === 1 ? "ATENÇÃO: Operação Irreversível" : "Confirmação Final"}
           </DialogTitle>
-          <DialogDescription className="text-left space-y-3">
+          <DialogDescription className="text-left">
             {step === 1 ? (
-              <>
+              <div className="space-y-3">
                 <p className="font-semibold text-red-600">
                   Esta ação irá DELETAR TODAS AS VENDAS do sistema!
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>Todas as vendas serão removidas permanentemente</li>
-                  <li>O estoque dos produtos será restaurado automaticamente</li>
-                  <li>Esta operação NÃO PODE ser desfeita</li>
-                  <li>Todos os relatórios de vendas serão perdidos</li>
-                </ul>
+                <div className="space-y-1 text-sm">
+                  <div>• Todas as vendas serão removidas permanentemente</div>
+                  <div>• O estoque dos produtos será restaurado automaticamente</div>
+                  <div>• Esta operação NÃO PODE ser desfeita</div>
+                  <div>• Todos os relatórios de vendas serão perdidos</div>
+                </div>
                 <p className="font-semibold">
                   Tem certeza absoluta que deseja continuar?
                 </p>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="space-y-3">
                 <p className="font-semibold text-red-600">
                   Para confirmar, digite exatamente:
                 </p>
                 <p className="font-mono text-center bg-gray-100 p-2 rounded">
                   DELETAR TODAS AS VENDAS
                 </p>
-              </>
+              </div>
             )}
           </DialogDescription>
         </DialogHeader>

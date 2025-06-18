@@ -50,30 +50,30 @@ export const ConfirmDeleteAllCategoriesDialog = ({ onConfirm, loading }: Confirm
             <AlertTriangle className="h-5 w-5" />
             {step === 1 ? "ATENÇÃO: Operação Irreversível" : "Confirmação Final"}
           </DialogTitle>
-          <DialogDescription className="text-left space-y-3">
+          <DialogDescription className="text-left">
             {step === 1 ? (
-              <>
+              <div className="space-y-3">
                 <p className="font-semibold text-red-600">
                   Esta ação irá DELETAR TODAS AS CATEGORIAS do sistema!
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>Só é possível se não houver produtos cadastrados</li>
-                  <li>Todas as categorias serão removidas permanentemente</li>
-                  <li>Esta operação NÃO PODE ser desfeita</li>
-                </ul>
+                <div className="space-y-1 text-sm">
+                  <div>• Só é possível se não houver produtos cadastrados</div>
+                  <div>• Todas as categorias serão removidas permanentemente</div>
+                  <div>• Esta operação NÃO PODE ser desfeita</div>
+                </div>
                 <p className="font-semibold">
                   Tem certeza absoluta que deseja continuar?
                 </p>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="space-y-3">
                 <p className="font-semibold text-red-600">
                   Para confirmar, digite exatamente:
                 </p>
                 <p className="font-mono text-center bg-gray-100 p-2 rounded">
                   DELETAR TODAS AS CATEGORIAS
                 </p>
-              </>
+              </div>
             )}
           </DialogDescription>
         </DialogHeader>

@@ -201,3 +201,52 @@ EXCEPTION
     RAISE EXCEPTION 'Erro ao atualizar produto: %', SQLERRM;
 END;
 $$;
+
+-- Corrigir a função delete_all_sales para evitar erro de UPDATE sem WHERE
+CREATE OR REPLACE FUNCTION public.delete_all_sales()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  deleted_count INTEGER;
+  current_user_email TEXT;
+  product_record RECORD;
+BEGIN
+  -- Verificar se o usuário atual é o Rafael
+  SELECT email INTO current_user_email FROM auth.users WHERE id = auth.uid();
+  
+  IF current_user_email != 'rafael.christiano@yahoo.com.br' THEN
+    RAISE EXCEPTION 'Acesso negado: apenas o super administrador pode deletar todas as vendas';
+  END IF;
+
+  -- Log da operação antes de deletar
+  INSERT INTO public.audit_logs (
+    user_id, action_type, table_name, details
+  ) VALUES (
+    auth.uid(), 
+    'DELETE_ALL_SALES', 
+    'sales',
+    jsonb_build_object('operation', 'delete_all_sales', 'timestamp', now())
+  );
+
+  -- Restaurar estoque para todos os produtos vendidos usando um loop
+  FOR product_record IN 
+    SELECT product_id, SUM(quantity) as total_quantity 
+    FROM public.sales 
+    GROUP BY product_id
+  LOOP
+    UPDATE public.products 
+    SET stock_quantity = stock_quantity + product_record.total_quantity
+    WHERE id = product_record.product_id;
+  END LOOP;
+
+  -- Contar quantas vendas serão deletadas
+  SELECT COUNT(*) INTO deleted_count FROM public.sales;
+
+  -- Deletar todas as vendas
+  DELETE FROM public.sales;
+
+  RETURN deleted_count;
+END;
+$$;

@@ -50,31 +50,31 @@ export const ConfirmDeleteAllProductsDialog = ({ onConfirm, loading }: ConfirmDe
             <AlertTriangle className="h-5 w-5" />
             {step === 1 ? "ATENÇÃO: Operação Irreversível" : "Confirmação Final"}
           </DialogTitle>
-          <DialogDescription className="text-left space-y-3">
+          <DialogDescription className="text-left">
             {step === 1 ? (
-              <>
+              <div className="space-y-3">
                 <p className="font-semibold text-red-600">
                   Esta ação irá DELETAR TODOS OS PRODUTOS do sistema!
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>Todos os produtos serão removidos permanentemente</li>
-                  <li>Todas as vendas relacionadas serão deletadas</li>
-                  <li>Todos os relacionamentos com promoções serão removidos</li>
-                  <li>Esta operação NÃO PODE ser desfeita</li>
-                </ul>
+                <div className="space-y-1 text-sm">
+                  <div>• Todos os produtos serão removidos permanentemente</div>
+                  <div>• Todas as vendas relacionadas serão deletadas</div>
+                  <div>• Todos os relacionamentos com promoções serão removidos</div>
+                  <div>• Esta operação NÃO PODE ser desfeita</div>
+                </div>
                 <p className="font-semibold">
                   Tem certeza absoluta que deseja continuar?
                 </p>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="space-y-3">
                 <p className="font-semibold text-red-600">
                   Para confirmar, digite exatamente:
                 </p>
                 <p className="font-mono text-center bg-gray-100 p-2 rounded">
                   DELETAR TODOS OS PRODUTOS
                 </p>
-              </>
+              </div>
             )}
           </DialogDescription>
         </DialogHeader>
