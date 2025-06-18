@@ -26,20 +26,71 @@ export const DeletePromotionDialog = ({
     setLoading(true);
 
     try {
-      // Remover associações primeiro
-      await supabase.from("product_promotions").delete().eq("promotion_id", promotion.id);
+      console.log('Iniciando exclusão da promoção:', promotion.id);
+
+      // Primeiro, remover a referência da promoção nas vendas (setar promotion_id como NULL)
+      const { error: salesUpdateError } = await supabase
+        .from('sales')
+        .update({ promotion_id: null })
+        .eq('promotion_id', promotion.id);
+
+      if (salesUpdateError) {
+        console.error('Erro ao atualizar vendas:', salesUpdateError);
+        toast({ 
+          title: "Erro", 
+          description: "Erro ao atualizar vendas relacionadas à promoção.", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      console.log('Referências da promoção removidas das vendas');
+
+      // Remover associações produto-promoção
+      const { error: ppError } = await supabase
+        .from("product_promotions")
+        .delete()
+        .eq("promotion_id", promotion.id);
+
+      if (ppError) {
+        console.error('Erro ao remover associações produto-promoção:', ppError);
+        toast({ 
+          title: "Erro", 
+          description: "Erro ao remover associações produto-promoção.", 
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      console.log('Associações produto-promoção removidas');
       
-      // Remover promoção
-      const { error } = await supabase.from("promotions").delete().eq("id", promotion.id);
+      // Finalmente, remover a promoção
+      const { error: promotionError } = await supabase
+        .from("promotions")
+        .delete()
+        .eq("id", promotion.id);
 
-      if (error) throw error;
+      if (promotionError) {
+        console.error('Erro ao excluir promoção:', promotionError);
+        throw promotionError;
+      }
 
-      toast({ title: "Promoção excluída!", description: "A promoção foi removida com sucesso." });
+      console.log('Promoção excluída com sucesso');
+
+      toast({ 
+        title: "Promoção excluída!", 
+        description: "A promoção foi removida com sucesso. As vendas feitas com esta promoção foram mantidas." 
+      });
 
       setOpen(false);
       onPromotionDeleted();
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      console.error('Erro geral na exclusão:', err);
+      toast({ 
+        title: "Erro", 
+        description: err.message || "Erro inesperado ao excluir promoção", 
+        variant: "destructive" 
+      });
     } finally {
       setLoading(false);
     }
@@ -56,11 +107,13 @@ export const DeletePromotionDialog = ({
         <DialogHeader>
           <DialogTitle>Excluir Promoção</DialogTitle>
           <DialogDescription>
-            Tem certeza que deseja excluir a promoção "{promotion.name}"? Esta ação não pode ser desfeita.
+            Tem certeza que deseja excluir a promoção "{promotion.name}"? 
+            As vendas já realizadas com esta promoção serão mantidas, mas a referência à promoção será removida.
+            Esta ação não pode ser desfeita.
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancelar
           </Button>
           <Button 
