@@ -55,6 +55,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const tryRestoreSession = async () => {
+    const backupData = localStorage.getItem('temp_session_backup');
+    if (backupData) {
+      try {
+        const backup = JSON.parse(backupData);
+        console.log('Tentando restaurar sessão do usuário:', backup.user_email);
+        
+        // Tentar usar refresh token para restaurar sessão
+        if (backup.refresh_token) {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: backup.access_token,
+            refresh_token: backup.refresh_token
+          });
+          
+          if (data.session && !error) {
+            console.log('Sessão restaurada com sucesso!');
+            localStorage.removeItem('temp_session_backup');
+            return true;
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao restaurar sessão:', error);
+      }
+      localStorage.removeItem('temp_session_backup');
+    }
+    return false;
+  };
+
   useEffect(() => {
     let mounted = true;
 
@@ -62,24 +90,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         console.log('Initializing auth...');
         
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        // Primeiro, tentar restaurar sessão se houver backup
+        const sessionRestored = await tryRestoreSession();
         
-        if (error) {
-          console.error('Error getting initial session:', error);
-        }
-
-        if (mounted) {
-          console.log('Initial session:', initialSession?.user?.email || 'No session');
-          setSession(initialSession);
-          setUser(initialSession?.user ?? null);
+        if (!sessionRestored) {
+          const { data: { session: initialSession }, error } = await supabase.auth.getSession();
           
-          if (initialSession?.user) {
-            await checkAdminStatus(initialSession.user.id);
-          } else {
-            setIsAdmin(false);
+          if (error) {
+            console.error('Error getting initial session:', error);
           }
-          
-          setLoading(false);
+
+          if (mounted) {
+            console.log('Initial session:', initialSession?.user?.email || 'No session');
+            setSession(initialSession);
+            setUser(initialSession?.user ?? null);
+            
+            if (initialSession?.user) {
+              await checkAdminStatus(initialSession.user.id);
+            } else {
+              setIsAdmin(false);
+            }
+            
+            setLoading(false);
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
