@@ -82,14 +82,37 @@ export const useUserManagement = () => {
       setLoading(true);
       console.log('Updating user password:', userId);
       
-      // Como não podemos usar supabase.auth.admin, vamos simular por enquanto
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Sessão não encontrada');
+      }
+
+      const response = await fetch('/functions/v1/admin-update-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          action: 'update_password',
+          newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao alterar senha');
+      }
+
       toast({
-        title: "Funcionalidade indisponível",
-        description: "A alteração de senha não está disponível no momento",
-        variant: "destructive",
+        title: "Senha alterada",
+        description: "A senha do usuário foi alterada com sucesso",
       });
       
-      return false;
+      return true;
     } catch (error: any) {
       console.error('Error updating password:', error);
       toast({
@@ -108,14 +131,38 @@ export const useUserManagement = () => {
       setLoading(true);
       console.log('Updating user email:', userId);
       
-      // Como não podemos usar supabase.auth.admin, vamos simular por enquanto
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Sessão não encontrada');
+      }
+
+      const response = await fetch('/functions/v1/admin-update-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          userId,
+          action: 'update_email',
+          newEmail,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao alterar email');
+      }
+
       toast({
-        title: "Funcionalidade indisponível",
-        description: "A alteração de email não está disponível no momento",
-        variant: "destructive",
+        title: "Email alterado",
+        description: "O email do usuário foi alterado com sucesso",
       });
       
-      return false;
+      await fetchAllUsers();
+      return true;
     } catch (error: any) {
       console.error('Error updating email:', error);
       toast({

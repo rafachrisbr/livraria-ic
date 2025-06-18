@@ -300,6 +300,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      delete_category_by_id: {
+        Args: { category_id_to_delete: string }
+        Returns: boolean
+      }
+      delete_product_by_id: {
+        Args: { product_id_to_delete: string }
+        Returns: boolean
+      }
       delete_user_by_id: {
         Args: { user_id_to_delete: string }
         Returns: boolean

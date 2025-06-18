@@ -6,6 +6,8 @@ import { ArrowLeft, Shield, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { UserManagementCard } from './UserManagementCard';
 import { SalesManagementCard } from './SalesManagementCard';
+import { ProductManagementCard } from './ProductManagementCard';
+import { CategoryManagementCard } from './CategoryManagementCard';
 
 interface SuperAdminContentProps {
   isMobile: boolean;
@@ -43,8 +45,12 @@ export const SuperAdminContent = ({ isMobile }: SuperAdminContentProps) => {
         </CardContent>
       </Card>
 
-      <UserManagementCard />
-      <SalesManagementCard />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <UserManagementCard />
+        <SalesManagementCard />
+        <ProductManagementCard />
+        <CategoryManagementCard />
+      </div>
     </>
   );
 
@@ -98,6 +104,8 @@ export const SuperAdminContent = ({ isMobile }: SuperAdminContentProps) => {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           <UserManagementCard />
           <SalesManagementCard />
+          <ProductManagementCard />
+          <CategoryManagementCard />
         </div>
       </div>
     </main>

@@ -130,7 +130,7 @@ export const UserManagementCard = () => {
                         size="sm"
                         onClick={() => handleEditUser(user, 'password')}
                         disabled={loading}
-                        title="Funcionalidade temporariamente indisponível"
+                        title="Alterar senha do usuário"
                       >
                         <Key className="h-4 w-4" />
                       </Button>
@@ -139,7 +139,7 @@ export const UserManagementCard = () => {
                         size="sm"
                         onClick={() => handleEditUser(user, 'email')}
                         disabled={loading}
-                        title="Funcionalidade temporariamente indisponível"
+                        title="Alterar email do usuário"
                       >
                         <Mail className="h-4 w-4" />
                       </Button>
