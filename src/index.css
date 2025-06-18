@@ -113,6 +113,11 @@
       min-height: 44px;
       min-width: 44px;
     }
+    
+    /* Better input handling on mobile */
+    input, textarea, select {
+      min-height: 44px;
+    }
   }
 
   /* Text truncation utilities */
@@ -139,6 +144,14 @@
     .safe-area-bottom {
       padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
+    
+    .safe-area-left {
+      padding-left: max(1rem, env(safe-area-inset-left));
+    }
+    
+    .safe-area-right {
+      padding-right: max(1rem, env(safe-area-inset-right));
+    }
   }
 
   /* Smooth scrolling */
@@ -146,5 +159,40 @@
     html {
       scroll-behavior: smooth;
     }
+  }
+
+  /* Image optimization for performance */
+  img {
+    image-rendering: -webkit-optimize-contrast;
+  }
+
+  /* Catholic themed decorative elements */
+  .catholic-decoration {
+    background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+  }
+
+  /* Enhanced backdrop blur for better mobile performance */
+  .backdrop-blur-sm {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
+
+/* Additional mobile-specific utilities */
+@layer utilities {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  .no-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
   }
 }

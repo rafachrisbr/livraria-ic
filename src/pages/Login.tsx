@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ const Login = () => {
   const [name, setName] = useState('');
   const [accessKey, setAccessKey] = useState('');
   const [showSignUp, setShowSignUp] = useState(false);
-  const { signIn, signUp, loading, user, isAdmin, checkingAdmin } = useAuth();
+  const { signIn, signUp, loading, user, isAdmin } = useAuth();
 
   // Se já está logado e é admin, redireciona para página de boas-vindas
   if (user && isAdmin) {
@@ -22,9 +23,9 @@ const Login = () => {
   }
 
   // Se já está logado mas ainda verificando status de admin, mostra loading
-  if (user && (loading || checkingAdmin)) {
+  if (user && loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-center text-blue-600">Verificando Permissões</CardTitle>
@@ -44,9 +45,9 @@ const Login = () => {
   }
 
   // Se já está logado e não é admin (após verificação completa), mostra mensagem específica
-  if (user && !loading && !checkingAdmin && !isAdmin) {
+  if (user && !loading && !isAdmin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-center text-red-600">Acesso Negado</CardTitle>
@@ -156,150 +157,180 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom">
       <div className="w-full max-w-md space-y-6">
-        {/* Organization Header */}
+        {/* FSSPX Logo Header */}
         <div className="text-center">
-          <h1 className="text-2xl font-light text-blue-800 mb-6 tracking-wide">
+          <img 
+            src="/lovable-uploads/018fdea3-20af-48a3-a8a4-6b13b4c8c6f7.png" 
+            alt="Fraternidade Sacerdotal São Pio X"
+            className="mx-auto h-16 sm:h-20 w-auto object-contain mb-4"
+          />
+          <h1 className="text-xl sm:text-2xl font-light text-blue-800 tracking-wide">
             Fraternidade Sacerdotal São Pio X
           </h1>
         </div>
 
-        {/* Logo Header */}
-        <div className="text-center space-y-4">
-          <div className="bg-white p-8 rounded-lg shadow-lg">
-            <h2 className="text-3xl font-bold text-blue-900 mb-4">
-              Livraria Imaculada Conceição
-            </h2>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">
-                Capela Imaculada Conceição
-              </p>
-              <p className="text-sm text-gray-600">
-                Indaiatuba - SP
-              </p>
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-sm text-blue-600 font-medium">
-                Sistema Administrativo
-              </p>
-            </div>
+        {/* Main Content Card with Background Image */}
+        <div className="relative">
+          {/* Background Image for larger screens */}
+          <div className="hidden sm:block absolute inset-0 opacity-10 rounded-lg overflow-hidden">
+            <img 
+              src="/lovable-uploads/6b0b2f9b-b8cf-4b64-8bf8-cb6b0b71c55b.png" 
+              alt="Imaculada Conceição"
+              className="w-full h-full object-cover"
+            />
           </div>
-        </div>
 
-        {/* Login/SignUp Form */}
-        <Card className="shadow-xl">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">
-              {isSignUp ? 'Cadastrar Administrador' : 'Login Administrativo'}
-            </CardTitle>
-            <CardDescription className="text-center">
-              {isSignUp 
-                ? 'Cadastre um novo administrador no sistema' 
-                : 'Acesse o sistema da livraria'
-              }
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
-              {isSignUp && (
-                <>
-                  <div className="space-y-2">
-                    <label htmlFor="accessKey" className="text-sm font-medium">
-                      Chave de Acesso *
-                    </label>
-                    <Input
-                      id="accessKey"
-                      type="password"
-                      placeholder="Digite a chave de acesso"
-                      value={accessKey}
-                      onChange={(e) => setAccessKey(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="name" className="text-sm font-medium">
-                      Nome Completo *
-                    </label>
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Digite seu nome completo"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                    />
-                  </div>
-                </>
-              )}
-              
+          {/* Organization Info */}
+          <div className="relative text-center mb-6">
+            <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-lg shadow-lg">
+              <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 mb-4">
+                Livraria Imaculada Conceição
+              </h2>
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email *
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="administrador@exemplo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Senha *
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Digite sua senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700"
-                disabled={loading || checkingAdmin}
-              >
-                {loading || checkingAdmin ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isSignUp ? 'Cadastrando...' : 'Entrando...'}
-                  </>
-                ) : (
-                  isSignUp ? 'Cadastrar Administrador' : 'Entrar'
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-4 text-center">
-              <Button 
-                variant="link" 
-                onClick={toggleSignUp}
-                className="text-blue-600 hover:text-blue-700"
-              >
-                {isSignUp 
-                  ? 'Já tem uma conta? Fazer login' 
-                  : 'Cadastrar novo administrador'
-                }
-              </Button>
-            </div>
-
-            {isSignUp && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs text-blue-700">
-                  <strong>Nota:</strong> Após o cadastro, você receberá um email de confirmação. 
-                  É necessário confirmar seu email antes de poder fazer login no sistema.
+                <p className="text-sm text-gray-600">
+                  Capela Imaculada Conceição
+                </p>
+                <p className="text-sm text-gray-600">
+                  Indaiatuba - SP
                 </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-sm text-blue-600 font-medium">
+                  Sistema Administrativo
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Login/SignUp Form */}
+          <Card className="shadow-xl relative backdrop-blur-sm bg-white/95">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-xl sm:text-2xl text-center">
+                {isSignUp ? 'Cadastrar Administrador' : 'Login Administrativo'}
+              </CardTitle>
+              <CardDescription className="text-center text-sm sm:text-base">
+                {isSignUp 
+                  ? 'Cadastre um novo administrador no sistema' 
+                  : 'Acesse o sistema da livraria'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
+                {isSignUp && (
+                  <>
+                    <div className="space-y-2">
+                      <label htmlFor="accessKey" className="text-sm font-medium">
+                        Chave de Acesso *
+                      </label>
+                      <Input
+                        id="accessKey"
+                        type="password"
+                        placeholder="Digite a chave de acesso"
+                        value={accessKey}
+                        onChange={(e) => setAccessKey(e.target.value)}
+                        required
+                        className="min-h-[44px]"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="name" className="text-sm font-medium">
+                        Nome Completo *
+                      </label>
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="Digite seu nome completo"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        className="min-h-[44px]"
+                      />
+                    </div>
+                  </>
+                )}
+                
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">
+                    Email *
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="administrador@exemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="min-h-[44px]"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium">
+                    Senha *
+                  </label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Digite sua senha"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="min-h-[44px]"
+                  />
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 min-h-[44px]"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {isSignUp ? 'Cadastrando...' : 'Entrando...'}
+                    </>
+                  ) : (
+                    isSignUp ? 'Cadastrar Administrador' : 'Entrar'
+                  )}
+                </Button>
+              </form>
+
+              <div className="mt-4 text-center">
+                <Button 
+                  variant="link" 
+                  onClick={toggleSignUp}
+                  className="text-blue-600 hover:text-blue-700 min-h-[44px]"
+                >
+                  {isSignUp 
+                    ? 'Já tem uma conta? Fazer login' 
+                    : 'Cadastrar novo administrador'
+                  }
+                </Button>
+              </div>
+
+              {isSignUp && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-blue-700">
+                    <strong>Nota:</strong> Após o cadastro, você receberá um email de confirmação. 
+                    É necessário confirmar seu email antes de poder fazer login no sistema.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Mobile Image - Only visible on small screens */}
+        <div className="sm:hidden text-center">
+          <img 
+            src="/lovable-uploads/6b0b2f9b-b8cf-4b64-8bf8-cb6b0b71c55b.png" 
+            alt="Imaculada Conceição"
+            className="mx-auto h-24 w-auto object-contain opacity-30"
+          />
+        </div>
       </div>
     </div>
   );

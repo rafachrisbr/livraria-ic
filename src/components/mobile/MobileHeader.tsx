@@ -27,29 +27,36 @@ export const MobileHeader = ({ title, subtitle }: MobileHeaderProps) => {
   };
 
   return (
-    <header className={`shadow-sm border-b border-slate-200 ${isTestMode ? 'bg-orange-50' : 'bg-white'}`}>
+    <header className={`shadow-sm border-b border-slate-200 safe-area-top ${isTestMode ? 'bg-orange-50' : 'bg-white'}`}>
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-              {isTestMode && (
-                <span className="px-1.5 py-0.5 text-xs font-semibold bg-orange-200 text-orange-800 rounded">
-                  TESTE
-                </span>
-              )}
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
+            <img 
+              src="/lovable-uploads/018fdea3-20af-48a3-a8a4-6b13b4c8c6f7.png" 
+              alt="FSSPX Logo"
+              className="h-6 w-auto object-contain flex-shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-gray-900 truncate">{title}</h1>
+                {isTestMode && (
+                  <span className="px-1.5 py-0.5 text-xs font-semibold bg-orange-200 text-orange-800 rounded flex-shrink-0">
+                    TESTE
+                  </span>
+                )}
+              </div>
+              {subtitle && <p className="text-sm text-gray-600 truncate">{subtitle}</p>}
             </div>
-            {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
           </div>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="min-h-[44px] min-w-[44px]">
                 <Menu className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <div className="px-2 py-1.5 text-sm text-gray-600">
+              <div className="px-2 py-1.5 text-sm text-gray-600 truncate">
                 {user?.email}
               </div>
               <DropdownMenuSeparator />
