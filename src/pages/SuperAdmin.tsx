@@ -7,17 +7,19 @@ import { Link } from 'react-router-dom';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { SuperAdminErrorBoundary } from '@/components/super-admin/SuperAdminErrorBoundary';
 import { SuperAdminContent } from '@/components/super-admin/SuperAdminContent';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const SuperAdmin = () => {
   const { user, signOut } = useAuth();
+  const isMobile = useIsMobile();
 
-  // Hook personalizado para detectar mobile sem dependência externa
-  const isMobile = window.innerWidth < 768;
-
-  console.log('SuperAdmin page loaded, user:', user?.email);
+  console.log('SuperAdmin page loaded');
+  console.log('User:', user?.email);
+  console.log('Is mobile:', isMobile);
 
   // Verificar se é o Rafael
   const isRafael = user?.email === 'rafael.christiano@yahoo.com.br';
+  console.log('Is Rafael:', isRafael);
 
   if (!isRafael) {
     console.log('Access denied - not Rafael');
