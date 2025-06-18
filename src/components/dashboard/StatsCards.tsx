@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, ShoppingCart, BarChart3, DollarSign, TrendingDown, Percent } from 'lucide-react';
@@ -71,33 +72,30 @@ export const StatsCards = () => {
         .gte('sale_date', today)
         .lt('sale_date', tomorrow);
 
-      // Buscar dados dos produtos com promoções ativas
-      const { data: products } = await supabase
+      // Buscar TODOS os produtos
+      const { data: allProducts } = await supabase
         .from('products')
-        .select(`
-          price, 
-          stock_quantity, 
-          minimum_stock,
-          product_promotions!inner(
-            promotion:promotions!inner(
-              discount_type,
-              discount_value,
-              is_active,
-              start_date,
-              end_date
-            )
-          )
-        `);
+        .select('id, price, stock_quantity, minimum_stock');
 
-      // Buscar produtos sem promoção
-      const { data: productsWithoutPromotion } = await supabase
-        .from('products')
-        .select('price, stock_quantity, minimum_stock')
-        .not('id', 'in', 
-          supabase
-            .from('product_promotions')
-            .select('product_id')
-        );
+      console.log('Total de produtos encontrados:', allProducts?.length || 0);
+
+      // Buscar todas as promoções ativas
+      const currentDate = new Date().toISOString();
+      const { data: activePromotions } = await supabase
+        .from('promotions')
+        .select('id, discount_type, discount_value, start_date, end_date')
+        .eq('is_active', true)
+        .lte('start_date', currentDate)
+        .gte('end_date', currentDate);
+
+      console.log('Promoções ativas encontradas:', activePromotions?.length || 0);
+
+      // Buscar associações produto-promoção
+      const { data: productPromotions } = await supabase
+        .from('product_promotions')
+        .select('product_id, promotion_id');
+
+      console.log('Associações produto-promoção encontradas:', productPromotions?.length || 0);
 
       let totalProducts = 0;
       let lowStockProducts = 0;
@@ -105,10 +103,11 @@ export const StatsCards = () => {
       let totalStockValueWithPromotions = 0;
       let totalPromotionSavings = 0;
 
-      // Processar produtos com promoção
-      if (products) {
-        products.forEach(product => {
-          totalProducts++;
+      if (allProducts) {
+        totalProducts = allProducts.length;
+        
+        allProducts.forEach(product => {
+          // Verificar estoque baixo
           if (product.stock_quantity <= product.minimum_stock) {
             lowStockProducts++;
           }
@@ -116,50 +115,39 @@ export const StatsCards = () => {
           const originalValue = product.price * product.stock_quantity;
           totalStockValue += originalValue;
 
-          // Calcular valor com promoção ativa
-          const promotion = product.product_promotions[0]?.promotion;
-          if (promotion && promotion.is_active) {
-            const currentDate = new Date();
-            const startDate = new Date(promotion.start_date);
-            const endDate = new Date(promotion.end_date);
+          // Verificar se o produto tem promoção ativa
+          const productPromotion = productPromotions?.find(pp => pp.product_id === product.id);
+          const activePromotion = productPromotion ? 
+            activePromotions?.find(p => p.id === productPromotion.promotion_id) : null;
+
+          if (activePromotion) {
+            let discountedPrice = product.price;
             
-            if (currentDate >= startDate && currentDate <= endDate) {
-              let discountedPrice = product.price;
-              
-              if (promotion.discount_type === 'percentage') {
-                discountedPrice = product.price * (1 - promotion.discount_value / 100);
-              } else if (promotion.discount_type === 'fixed_amount') {
-                discountedPrice = Math.max(0, product.price - promotion.discount_value);
-              }
-              
-              const promotionalValue = discountedPrice * product.stock_quantity;
-              totalStockValueWithPromotions += promotionalValue;
-              totalPromotionSavings += (originalValue - promotionalValue);
-            } else {
-              totalStockValueWithPromotions += originalValue;
+            if (activePromotion.discount_type === 'percentage') {
+              discountedPrice = product.price * (1 - activePromotion.discount_value / 100);
+            } else if (activePromotion.discount_type === 'fixed_amount') {
+              discountedPrice = Math.max(0, product.price - activePromotion.discount_value);
             }
+            
+            const promotionalValue = discountedPrice * product.stock_quantity;
+            totalStockValueWithPromotions += promotionalValue;
+            totalPromotionSavings += (originalValue - promotionalValue);
           } else {
             totalStockValueWithPromotions += originalValue;
           }
         });
       }
 
-      // Processar produtos sem promoção
-      if (productsWithoutPromotion) {
-        productsWithoutPromotion.forEach(product => {
-          totalProducts++;
-          if (product.stock_quantity <= product.minimum_stock) {
-            lowStockProducts++;
-          }
-
-          const value = product.price * product.stock_quantity;
-          totalStockValue += value;
-          totalStockValueWithPromotions += value;
-        });
-      }
-
       const todaySalesCount = todaySales?.length || 0;
       const todayRevenueValue = todaySales?.reduce((sum, s) => sum + s.total_price, 0) || 0;
+
+      console.log('Estatísticas calculadas:', {
+        totalProducts,
+        lowStockProducts,
+        totalStockValue,
+        totalStockValueWithPromotions,
+        totalPromotionSavings
+      });
 
       setStats({
         totalProducts,
@@ -172,12 +160,12 @@ export const StatsCards = () => {
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
-      // Em caso de erro, buscar dados básicos sem promoções
-      const { data: allProducts } = await supabase
+      
+      // Em caso de erro, buscar apenas dados básicos
+      const { data: basicProducts } = await supabase
         .from('products')
         .select('price, stock_quantity, minimum_stock');
 
-      // Buscar vendas de hoje em caso de erro
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       
@@ -187,10 +175,10 @@ export const StatsCards = () => {
         .gte('sale_date', today)
         .lt('sale_date', tomorrow);
 
-      if (allProducts) {
-        const totalProducts = allProducts.length;
-        const lowStockProducts = allProducts.filter(p => p.stock_quantity <= p.minimum_stock).length;
-        const totalStockValue = allProducts.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
+      if (basicProducts) {
+        const totalProducts = basicProducts.length;
+        const lowStockProducts = basicProducts.filter(p => p.stock_quantity <= p.minimum_stock).length;
+        const totalStockValue = basicProducts.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
 
         const todaySalesCount = todaySalesData?.length || 0;
         const todayRevenueValue = todaySalesData?.reduce((sum, s) => sum + s.total_price, 0) || 0;
