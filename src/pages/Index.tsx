@@ -6,18 +6,27 @@ import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const { user, loading, isAdmin } = useAuth();
-  const [initialLoad, setInitialLoad] = useState(true);
+  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
     console.log('Index component - User:', user?.email || 'undefined', 'Admin:', isAdmin, 'Loading:', loading);
     
-    if (!loading && initialLoad) {
-      setInitialLoad(false);
+    // Timeout de segurança para mostrar conteúdo mesmo se loading não resolver
+    const timeout = setTimeout(() => {
+      console.log('Safety timeout - showing content');
+      setShowContent(true);
+    }, 5000);
+
+    if (!loading) {
+      setShowContent(true);
+      clearTimeout(timeout);
     }
-  }, [user, isAdmin, loading, initialLoad]);
+
+    return () => clearTimeout(timeout);
+  }, [user, isAdmin, loading]);
 
   // Show loading while auth is initializing
-  if (loading || initialLoad) {
+  if (loading && !showContent) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">

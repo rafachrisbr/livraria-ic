@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -32,6 +32,16 @@ const ENVIRONMENTS: Record<Environment, EnvironmentConfig> = {
   }
 };
 
+const createSupabaseClient = (config: EnvironmentConfig) => {
+  return createClient<Database>(config.url, config.anonKey, {
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+    }
+  });
+};
+
 export const EnvironmentProvider = ({ children }: { children: ReactNode }) => {
   const [environment, setEnvironmentState] = useState<Environment>(() => {
     const saved = localStorage.getItem('environment');
@@ -40,18 +50,12 @@ export const EnvironmentProvider = ({ children }: { children: ReactNode }) => {
 
   const [supabaseClient, setSupabaseClient] = useState<SupabaseClient<Database>>(() => {
     const config = ENVIRONMENTS[environment];
-    return createClient<Database>(config.url, config.anonKey, {
-      auth: {
-        storage: localStorage,
-        persistSession: true,
-        autoRefreshToken: true,
-      }
-    });
+    return createSupabaseClient(config);
   });
 
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const setEnvironment = async (env: Environment) => {
+  const setEnvironment = useCallback(async (env: Environment) => {
     if (env === environment) return;
     
     setIsTransitioning(true);
@@ -63,13 +67,7 @@ export const EnvironmentProvider = ({ children }: { children: ReactNode }) => {
       
       // Criar novo cliente Supabase
       const config = ENVIRONMENTS[env];
-      const newClient = createClient<Database>(config.url, config.anonKey, {
-        auth: {
-          storage: localStorage,
-          persistSession: true,
-          autoRefreshToken: true,
-        }
-      });
+      const newClient = createSupabaseClient(config);
 
       // Atualizar estado
       setEnvironmentState(env);
@@ -85,7 +83,7 @@ export const EnvironmentProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsTransitioning(false);
     }
-  };
+  }, [environment]);
 
   // Sinalizar para o AuthProvider quando o ambiente mudar
   useEffect(() => {

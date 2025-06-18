@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useSupabase } from '@/hooks/useSupabase';
@@ -7,7 +8,6 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  checkingAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -29,14 +29,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [checkingAdmin, setCheckingAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const checkAdminStatus = async (userId: string, forceRecheck = false) => {
-    if (checkingAdmin && !forceRecheck) return;
-    
+  const checkAdminStatus = async (userId: string) => {
     try {
-      setCheckingAdmin(true);
       console.log('Checking admin status for user:', userId);
       
       const { data: adminData, error } = await supabase
@@ -56,30 +52,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Error in checkAdminStatus:', error);
       setIsAdmin(false);
-    } finally {
-      setCheckingAdmin(false);
     }
   };
 
-  // Reagir a mudanças de ambiente
-  useEffect(() => {
-    const handleEnvironmentChange = (event: CustomEvent) => {
-      console.log('Environment changed, rechecking admin status...');
-      if (user) {
-        // Re-verificar status de admin com novo cliente
-        checkAdminStatus(user.id, true);
-      }
-    };
-
-    window.addEventListener('environmentChanged', handleEnvironmentChange as EventListener);
-    
-    return () => {
-      window.removeEventListener('environmentChanged', handleEnvironmentChange as EventListener);
-    };
-  }, [user]);
-
   useEffect(() => {
     let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    // Timeout de segurança para evitar loading infinito
+    const safetyTimeout = setTimeout(() => {
+      if (mounted) {
+        console.log('Safety timeout reached, setting loading to false');
+        setLoading(false);
+      }
+    }, 10000); // 10 segundos
 
     const initializeAuth = async () => {
       try {
@@ -97,12 +83,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(initialSession?.user ?? null);
           
           if (initialSession?.user) {
-            await checkAdminStatus(initialSession.user.id);
+            // Defer admin check to avoid blocking
+            timeoutId = setTimeout(() => {
+              if (mounted) {
+                checkAdminStatus(initialSession.user.id);
+              }
+            }, 100);
           } else {
             setIsAdmin(false);
           }
           
           setLoading(false);
+          clearTimeout(safetyTimeout);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -111,6 +103,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(null);
           setIsAdmin(false);
           setLoading(false);
+          clearTimeout(safetyTimeout);
         }
       }
     };
@@ -124,8 +117,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        if (session?.user) {
-          setTimeout(() => {
+        if (session?.user && event === 'SIGNED_IN') {
+          // Defer admin check to prevent blocking
+          timeoutId = setTimeout(() => {
             if (mounted) {
               checkAdminStatus(session.user.id);
             }
@@ -135,6 +129,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         
         setLoading(false);
+        clearTimeout(safetyTimeout);
       }
     );
 
@@ -143,6 +138,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
+      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [supabase]);
 
@@ -234,7 +231,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     user,
     session,
     loading,
-    checkingAdmin,
     signIn,
     signUp,
     signOut,

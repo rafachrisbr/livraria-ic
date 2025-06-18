@@ -1,7 +1,10 @@
 
+import { useMemo } from 'react';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 export const useSupabase = () => {
   const { supabaseClient } = useEnvironment();
-  return supabaseClient;
+  
+  // Memoizar o cliente para evitar re-renders desnecessários
+  return useMemo(() => supabaseClient, [supabaseClient]);
 };
