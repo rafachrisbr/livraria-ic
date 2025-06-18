@@ -1,8 +1,8 @@
 
 {
-  "name": "Livraria Imaculada Conceição - Sistema Administrativo",
-  "short_name": "Livraria IC",
-  "description": "Sistema de Gestão da Livraria Imaculada Conceição",
+  "name": "Livraria Gestão",
+  "short_name": "Livraria Gestão",
+  "description": "Sistema de Gestão da Livraria",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8fafc",
