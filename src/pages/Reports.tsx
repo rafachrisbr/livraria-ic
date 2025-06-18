@@ -172,15 +172,24 @@ const Reports = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white shadow-sm border-b border-slate-200">
+    <div className="min-h-screen bg-slate-50 relative overflow-hidden">
+      {/* Background image */}
+      <div className="fixed inset-0 opacity-5 pointer-events-none">
+        <img 
+          src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
+          alt="Imaculada Conceição"
+          className="w-full h-full object-cover object-center"
+        />
+      </div>
+      
+      <header className="bg-white shadow-sm border-b border-slate-200 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link to="/">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar ao Dashboard
+                  Voltar ao Painel
                 </Button>
               </Link>
               <div>
@@ -206,7 +215,7 @@ const Reports = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         {loading ? (
           <div className="text-center py-8">Carregando relatórios...</div>
         ) : (

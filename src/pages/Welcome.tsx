@@ -35,13 +35,22 @@ const Welcome = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom relative overflow-hidden">
+      {/* Background image */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
+        <img 
+          src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
+          alt="Imaculada Conceição"
+          className="w-full h-full object-cover object-center"
+        />
+      </div>
+      
+      <div className="w-full max-w-md space-y-6 relative z-10">
         {/* FSSPX Logo */}
         <div className="text-center">
           <img 
             src="https://cadastro.fsspx.com.br/wp-content/uploads/2023/04/fsspx-logo-novo-png-large-3.png" 
-            alt="Fraternidade Sacerdotal São Pio X"
+            alt="FSSPX Logo"
             className="mx-auto h-12 sm:h-16 w-auto object-contain mb-4"
             onError={(e) => {
               e.currentTarget.src = "https://static.wixstatic.com/media/ecc2b9_af29ba9d8fb542baae713a67ff8faafa~mv2.png/v1/fill/w_184,h_184,al_c,usm_0.66_1.00_0.01/ecc2b9_af29ba9d8fb542baae713a67ff8faafa~mv2.png";
@@ -49,9 +58,9 @@ const Welcome = () => {
           />
         </div>
 
-        <Card className="text-center relative overflow-hidden">
+        <Card className="text-center relative overflow-hidden bg-white/95 backdrop-blur-sm border border-white/20 shadow-xl">
           {/* Background decoration */}
-          <div className="absolute top-0 right-0 opacity-5">
+          <div className="absolute top-0 right-0 opacity-10">
             <img 
               src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
               alt="Imaculada Conceição"

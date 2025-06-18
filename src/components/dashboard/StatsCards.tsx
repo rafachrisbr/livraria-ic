@@ -1,13 +1,15 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, ShoppingCart, BarChart3, DollarSign, TrendingDown } from 'lucide-react';
+import { Package, ShoppingCart, BarChart3, DollarSign, TrendingDown, Percent } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface StatsData {
   totalProducts: number;
   lowStockProducts: number;
   totalStockValue: number;
+  totalStockValueWithPromotions: number;
+  totalPromotionSavings: number;
   todaySales: number;
   todayRevenue: number;
 }
@@ -17,6 +19,8 @@ export const StatsCards = () => {
     totalProducts: 0,
     lowStockProducts: 0,
     totalStockValue: 0,
+    totalStockValueWithPromotions: 0,
+    totalPromotionSavings: 0,
     todaySales: 0,
     todayRevenue: 0,
   });
@@ -24,7 +28,7 @@ export const StatsCards = () => {
   useEffect(() => {
     fetchStats();
     
-    // Configurar escuta em tempo real para produtos e vendas
+    // Configurar escuta em tempo real para produtos, vendas e promoções
     const productsChannel = supabase
       .channel('stats-products-changes')
       .on('postgres_changes', 
@@ -41,18 +45,50 @@ export const StatsCards = () => {
       )
       .subscribe();
 
+    const promotionsChannel = supabase
+      .channel('stats-promotions-changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'promotions' }, 
+        () => fetchStats()
+      )
+      .subscribe();
+
     return () => {
       productsChannel.unsubscribe();
       salesChannel.unsubscribe();
+      promotionsChannel.unsubscribe();
     };
   }, []);
 
   const fetchStats = async () => {
     try {
-      // Buscar dados dos produtos
+      // Buscar dados dos produtos com promoções ativas
       const { data: products } = await supabase
         .from('products')
-        .select('price, stock_quantity, minimum_stock');
+        .select(`
+          price, 
+          stock_quantity, 
+          minimum_stock,
+          product_promotions!inner(
+            promotion:promotions!inner(
+              discount_type,
+              discount_value,
+              is_active,
+              start_date,
+              end_date
+            )
+          )
+        `);
+
+      // Buscar produtos sem promoção
+      const { data: productsWithoutPromotion } = await supabase
+        .from('products')
+        .select('price, stock_quantity, minimum_stock')
+        .not('id', 'in', 
+          supabase
+            .from('product_promotions')
+            .select('product_id')
+        );
 
       // Buscar vendas de hoje
       const today = new Date().toISOString().split('T')[0];
@@ -64,10 +100,88 @@ export const StatsCards = () => {
         .gte('sale_date', today)
         .lt('sale_date', tomorrow);
 
+      let totalProducts = 0;
+      let lowStockProducts = 0;
+      let totalStockValue = 0;
+      let totalStockValueWithPromotions = 0;
+      let totalPromotionSavings = 0;
+
+      // Processar produtos com promoção
       if (products) {
-        const totalProducts = products.length;
-        const lowStockProducts = products.filter(p => p.stock_quantity <= p.minimum_stock).length;
-        const totalStockValue = products.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
+        products.forEach(product => {
+          totalProducts++;
+          if (product.stock_quantity <= product.minimum_stock) {
+            lowStockProducts++;
+          }
+
+          const originalValue = product.price * product.stock_quantity;
+          totalStockValue += originalValue;
+
+          // Calcular valor com promoção ativa
+          const promotion = product.product_promotions[0]?.promotion;
+          if (promotion && promotion.is_active) {
+            const currentDate = new Date();
+            const startDate = new Date(promotion.start_date);
+            const endDate = new Date(promotion.end_date);
+            
+            if (currentDate >= startDate && currentDate <= endDate) {
+              let discountedPrice = product.price;
+              
+              if (promotion.discount_type === 'percentage') {
+                discountedPrice = product.price * (1 - promotion.discount_value / 100);
+              } else if (promotion.discount_type === 'fixed_amount') {
+                discountedPrice = Math.max(0, product.price - promotion.discount_value);
+              }
+              
+              const promotionalValue = discountedPrice * product.stock_quantity;
+              totalStockValueWithPromotions += promotionalValue;
+              totalPromotionSavings += (originalValue - promotionalValue);
+            } else {
+              totalStockValueWithPromotions += originalValue;
+            }
+          } else {
+            totalStockValueWithPromotions += originalValue;
+          }
+        });
+      }
+
+      // Processar produtos sem promoção
+      if (productsWithoutPromotion) {
+        productsWithoutPromotion.forEach(product => {
+          totalProducts++;
+          if (product.stock_quantity <= product.minimum_stock) {
+            lowStockProducts++;
+          }
+
+          const value = product.price * product.stock_quantity;
+          totalStockValue += value;
+          totalStockValueWithPromotions += value;
+        });
+      }
+
+      const todaySalesCount = todaySales?.length || 0;
+      const todayRevenueValue = todaySales?.reduce((sum, s) => sum + s.total_price, 0) || 0;
+
+      setStats({
+        totalProducts,
+        lowStockProducts,
+        totalStockValue,
+        totalStockValueWithPromotions,
+        totalPromotionSavings,
+        todaySales: todaySalesCount,
+        todayRevenue: todayRevenueValue,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      // Em caso de erro, buscar dados básicos sem promoções
+      const { data: allProducts } = await supabase
+        .from('products')
+        .select('price, stock_quantity, minimum_stock');
+
+      if (allProducts) {
+        const totalProducts = allProducts.length;
+        const lowStockProducts = allProducts.filter(p => p.stock_quantity <= p.minimum_stock).length;
+        const totalStockValue = allProducts.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
 
         const todaySalesCount = todaySales?.length || 0;
         const todayRevenueValue = todaySales?.reduce((sum, s) => sum + s.total_price, 0) || 0;
@@ -76,21 +190,12 @@ export const StatsCards = () => {
           totalProducts,
           lowStockProducts,
           totalStockValue,
+          totalStockValueWithPromotions: totalStockValue,
+          totalPromotionSavings: 0,
           todaySales: todaySalesCount,
           todayRevenue: todayRevenueValue,
         });
-      } else {
-        // Se não há produtos, zerar todas as estatísticas
-        setStats({
-          totalProducts: 0,
-          lowStockProducts: 0,
-          totalStockValue: 0,
-          todaySales: 0,
-          todayRevenue: 0,
-        });
       }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
     }
   };
 
@@ -142,13 +247,27 @@ export const StatsCards = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-purple-900">
-            R$ {stats.totalStockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          <div className="space-y-1">
+            {stats.totalPromotionSavings > 0 && (
+              <div className="text-sm text-gray-500 line-through">
+                R$ {stats.totalStockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+            )}
+            <div className="text-2xl font-bold text-purple-900">
+              R$ {stats.totalStockValueWithPromotions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+            {stats.totalPromotionSavings > 0 ? (
+              <p className="text-xs text-green-600 flex items-center mt-1">
+                <Percent className="h-3 w-3 mr-1" />
+                Economia: R$ {stats.totalPromotionSavings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (promoções)
+              </p>
+            ) : (
+              <p className="text-xs text-purple-600 flex items-center mt-1">
+                <TrendingDown className="h-3 w-3 mr-1" />
+                Valor total em estoque
+              </p>
+            )}
           </div>
-          <p className="text-xs text-purple-600 flex items-center mt-1">
-            <TrendingDown className="h-3 w-3 mr-1" />
-            Valor total em estoque
-          </p>
         </CardContent>
       </Card>
 
