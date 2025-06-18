@@ -92,7 +92,7 @@ export const SuperAdminContent = ({ isMobile }: SuperAdminContentProps) => {
                 </p>
               </div>
             </div>
-          </div>
+          </CardContent>
         </Card>
         
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
