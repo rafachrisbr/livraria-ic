@@ -170,9 +170,6 @@ const Login = () => {
               e.currentTarget.src = "https://static.wixstatic.com/media/ecc2b9_af29ba9d8fb542baae713a67ff8faafa~mv2.png/v1/fill/w_184,h_184,al_c,usm_0.66_1.00_0.01/ecc2b9_af29ba9d8fb542baae713a67ff8faafa~mv2.png";
             }}
           />
-          <h1 className="text-xl sm:text-2xl font-light text-blue-800 tracking-wide">
-            Fraternidade Sacerdotal São Pio X
-          </h1>
         </div>
 
         {/* Main Content Card with Background Image */}
