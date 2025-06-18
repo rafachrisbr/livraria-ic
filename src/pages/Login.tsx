@@ -162,9 +162,13 @@ const Login = () => {
         {/* FSSPX Logo Header */}
         <div className="text-center">
           <img 
-            src="/lovable-uploads/018fdea3-20af-48a3-a8a4-6b13b4c8c6f7.png" 
+            src="https://cadastro.fsspx.com.br/wp-content/uploads/2023/04/fsspx-logo-novo-png-large-3.png" 
             alt="Fraternidade Sacerdotal São Pio X"
             className="mx-auto h-16 sm:h-20 w-auto object-contain mb-4"
+            onError={(e) => {
+              // Fallback para logo alternativo se o primeiro não carregar
+              e.currentTarget.src = "https://static.wixstatic.com/media/ecc2b9_af29ba9d8fb542baae713a67ff8faafa~mv2.png/v1/fill/w_184,h_184,al_c,usm_0.66_1.00_0.01/ecc2b9_af29ba9d8fb542baae713a67ff8faafa~mv2.png";
+            }}
           />
           <h1 className="text-xl sm:text-2xl font-light text-blue-800 tracking-wide">
             Fraternidade Sacerdotal São Pio X
@@ -176,7 +180,7 @@ const Login = () => {
           {/* Background Image for larger screens */}
           <div className="hidden sm:block absolute inset-0 opacity-10 rounded-lg overflow-hidden">
             <img 
-              src="/lovable-uploads/6b0b2f9b-b8cf-4b64-8bf8-cb6b0b71c55b.png" 
+              src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
               alt="Imaculada Conceição"
               className="w-full h-full object-cover"
             />
@@ -326,7 +330,7 @@ const Login = () => {
         {/* Mobile Image - Only visible on small screens */}
         <div className="sm:hidden text-center">
           <img 
-            src="/lovable-uploads/6b0b2f9b-b8cf-4b64-8bf8-cb6b0b71c55b.png" 
+            src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
             alt="Imaculada Conceição"
             className="mx-auto h-24 w-auto object-contain opacity-30"
           />
