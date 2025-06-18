@@ -62,6 +62,16 @@ export const StatsCards = () => {
 
   const fetchStats = async () => {
     try {
+      // Buscar vendas de hoje
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const { data: todaySales } = await supabase
+        .from('sales')
+        .select('total_price')
+        .gte('sale_date', today)
+        .lt('sale_date', tomorrow);
+
       // Buscar dados dos produtos com promoções ativas
       const { data: products } = await supabase
         .from('products')
@@ -89,16 +99,6 @@ export const StatsCards = () => {
             .from('product_promotions')
             .select('product_id')
         );
-
-      // Buscar vendas de hoje
-      const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      
-      const { data: todaySales } = await supabase
-        .from('sales')
-        .select('total_price')
-        .gte('sale_date', today)
-        .lt('sale_date', tomorrow);
 
       let totalProducts = 0;
       let lowStockProducts = 0;
@@ -178,13 +178,23 @@ export const StatsCards = () => {
         .from('products')
         .select('price, stock_quantity, minimum_stock');
 
+      // Buscar vendas de hoje em caso de erro
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const { data: todaySalesData } = await supabase
+        .from('sales')
+        .select('total_price')
+        .gte('sale_date', today)
+        .lt('sale_date', tomorrow);
+
       if (allProducts) {
         const totalProducts = allProducts.length;
         const lowStockProducts = allProducts.filter(p => p.stock_quantity <= p.minimum_stock).length;
         const totalStockValue = allProducts.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
 
-        const todaySalesCount = todaySales?.length || 0;
-        const todayRevenueValue = todaySales?.reduce((sum, s) => sum + s.total_price, 0) || 0;
+        const todaySalesCount = todaySalesData?.length || 0;
+        const todayRevenueValue = todaySalesData?.reduce((sum, s) => sum + s.total_price, 0) || 0;
 
         setStats({
           totalProducts,
