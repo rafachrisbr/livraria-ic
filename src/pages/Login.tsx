@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -157,13 +158,15 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom relative overflow-hidden">
-      {/* Background image for the entire login page */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none">
+      {/* Background image with higher opacity and gradient overlay */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
         <img 
           src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
           alt="Imaculada Conceição"
           className="w-full h-full object-cover object-center"
         />
+        {/* Gradient overlay to ensure text readability */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-indigo-100/70 to-blue-50/80"></div>
       </div>
       
       <div className="w-full max-w-md space-y-6 relative z-10">
@@ -179,13 +182,22 @@ const Login = () => {
           />
         </div>
 
-        {/* Organization Info */}
+        {/* Organization Info with decorative image */}
         <div className="relative text-center mb-6">
-          <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-lg shadow-lg border border-white/20">
-            <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 mb-4">
+          <div className="bg-white/95 backdrop-blur-sm p-6 sm:p-8 rounded-lg shadow-lg border border-white/20 relative overflow-hidden">
+            {/* Decorative Immaculate Conception image in the card */}
+            <div className="absolute top-2 right-2 opacity-40 pointer-events-none hidden sm:block">
+              <img 
+                src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
+                alt="Imaculada Conceição"
+                className="h-16 w-auto object-contain"
+              />
+            </div>
+            
+            <h2 className="text-2xl sm:text-3xl font-bold text-blue-900 mb-4 relative z-10">
               Livraria Imaculada Conceição
             </h2>
-            <div className="space-y-2">
+            <div className="space-y-2 relative z-10">
               <p className="text-sm text-gray-600">
                 Capela Imaculada Conceição
               </p>
@@ -193,7 +205,7 @@ const Login = () => {
                 Indaiatuba - SP
               </p>
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-gray-200 relative z-10">
               <p className="text-sm text-blue-600 font-medium">
                 Sistema Administrativo
               </p>
@@ -201,9 +213,18 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Login/SignUp Form */}
-        <Card className="shadow-xl relative backdrop-blur-sm bg-white/95 border border-white/20">
-          <CardHeader className="space-y-1">
+        {/* Login/SignUp Form with decorative image */}
+        <Card className="shadow-xl relative backdrop-blur-sm bg-white/95 border border-white/20 overflow-hidden">
+          {/* Decorative image in login card */}
+          <div className="absolute top-2 right-2 opacity-30 pointer-events-none hidden lg:block">
+            <img 
+              src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
+              alt="Imaculada Conceição"
+              className="h-12 w-auto object-contain"
+            />
+          </div>
+          
+          <CardHeader className="space-y-1 relative z-10">
             <CardTitle className="text-xl sm:text-2xl text-center">
               {isSignUp ? 'Cadastrar Administrador' : 'Login'}
             </CardTitle>
@@ -214,7 +235,7 @@ const Login = () => {
               }
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
               {isSignUp && (
                 <>
@@ -319,13 +340,19 @@ const Login = () => {
           </CardContent>
         </Card>
 
-        {/* Mobile decorative image */}
-        <div className="sm:hidden text-center">
-          <img 
-            src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
-            alt="Imaculada Conceição"
-            className="mx-auto h-20 w-auto object-contain opacity-30"
-          />
+        {/* Enhanced mobile decorative image */}
+        <div className="text-center">
+          <div className="relative inline-block">
+            <img 
+              src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
+              alt="Imaculada Conceição"
+              className="mx-auto h-24 sm:h-28 w-auto object-contain opacity-60"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-blue-50/30 rounded-lg"></div>
+          </div>
+          <p className="text-xs text-blue-600 opacity-80 mt-2 font-medium">
+            Imaculada Conceição, rogai por nós
+          </p>
         </div>
       </div>
     </div>
