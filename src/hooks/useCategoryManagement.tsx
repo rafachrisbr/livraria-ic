@@ -113,11 +113,83 @@ export const useCategoryManagement = () => {
     }
   };
 
+  const updateCategory = async (categoryId: string, name: string, description?: string) => {
+    try {
+      setLoading(true);
+      console.log('Updating category:', categoryId, name);
+      
+      const { data, error } = await supabase.rpc('update_category_by_id', {
+        category_id_to_update: categoryId,
+        new_name: name,
+        new_description: description
+      });
+      
+      if (error) {
+        console.error('Error updating category:', error);
+        throw error;
+      }
+      
+      toast({
+        title: "Categoria atualizada",
+        description: "A categoria foi atualizada com sucesso",
+      });
+      
+      await fetchAllCategories();
+      return true;
+    } catch (error: any) {
+      console.error('Error in updateCategory:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar categoria",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAllCategories = async () => {
+    try {
+      setLoading(true);
+      console.log('Deleting all categories...');
+      
+      const { data, error } = await supabase.rpc('delete_all_categories');
+      
+      if (error) {
+        console.error('Error deleting all categories:', error);
+        throw error;
+      }
+      
+      const deletedCount = data || 0;
+      
+      toast({
+        title: "Categorias deletadas",
+        description: `${deletedCount} categoria(s) foram removidas`,
+      });
+      
+      await fetchAllCategories();
+      return deletedCount;
+    } catch (error: any) {
+      console.error('Error in deleteAllCategories:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao deletar todas as categorias",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     categories,
     loading,
     fetchAllCategories,
     deleteCategory,
     createCategory,
+    updateCategory,
+    deleteAllCategories,
   };
 };

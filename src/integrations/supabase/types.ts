@@ -296,6 +296,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_all_categories: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      delete_all_products: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       delete_all_sales: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -354,6 +362,25 @@ export type Database = {
           p_user_agent?: string
         }
         Returns: undefined
+      }
+      update_category_by_id: {
+        Args: {
+          category_id_to_update: string
+          new_name: string
+          new_description?: string
+        }
+        Returns: boolean
+      }
+      update_product_by_id: {
+        Args: {
+          product_id_to_update: string
+          new_name: string
+          new_price: number
+          new_description?: string
+          new_product_code?: string
+          new_category_id?: string
+        }
+        Returns: boolean
       }
     }
     Enums: {

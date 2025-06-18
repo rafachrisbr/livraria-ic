@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Package, Trash2, Edit, AlertCircle } from "lucide-react";
 import { useProductManagement } from "@/hooks/useProductManagement";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { EditProductDialog } from "./EditProductDialog";
+import { ConfirmDeleteAllProductsDialog } from "./ConfirmDeleteAllProductsDialog";
 
 export const ProductManagementCard = () => {
-  const { products, loading, fetchAllProducts, deleteProduct, updateProductStock } = useProductManagement();
+  const { products, loading, fetchAllProducts, deleteProduct, updateProductStock, updateProduct, deleteAllProducts } = useProductManagement();
   const [error, setError] = useState<string | null>(null);
   const [editingStock, setEditingStock] = useState<{ [key: string]: number }>({});
 
@@ -92,9 +94,17 @@ export const ProductManagementCard = () => {
           <span className="text-sm text-gray-600">
             Total de produtos: {products.length}
           </span>
-          <Button onClick={fetchAllProducts} variant="outline" size="sm" disabled={loading}>
-            {loading ? "Carregando..." : "Atualizar Lista"}
-          </Button>
+          <div className="flex gap-2">
+            {products.length > 0 && (
+              <ConfirmDeleteAllProductsDialog
+                onConfirm={deleteAllProducts}
+                loading={loading}
+              />
+            )}
+            <Button onClick={fetchAllProducts} variant="outline" size="sm" disabled={loading}>
+              {loading ? "Carregando..." : "Atualizar Lista"}
+            </Button>
+          </div>
         </div>
 
         <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -176,37 +186,45 @@ export const ProductManagementCard = () => {
                     </div>
                   </div>
                   
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={loading}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Deletar Produto</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja deletar o produto "{product.name}"? 
-                          Esta ação também irá deletar todas as vendas relacionadas a este produto.
-                          Esta ação é irreversível.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => deleteProduct(product.id)}
-                          className="bg-red-600 hover:bg-red-700"
+                  <div className="flex gap-2">
+                    <EditProductDialog
+                      product={product}
+                      onEdit={updateProduct}
+                      loading={loading}
+                    />
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={loading}
+                          className="text-red-600 hover:text-red-700"
                         >
-                          Deletar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Deletar Produto</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja deletar o produto "{product.name}"? 
+                            Esta ação também irá deletar todas as vendas relacionadas a este produto.
+                            Esta ação é irreversível.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteProduct(product.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Deletar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </div>
             ))

@@ -118,11 +118,93 @@ export const useProductManagement = () => {
     }
   };
 
+  const updateProduct = async (
+    productId: string, 
+    name: string, 
+    price: number, 
+    description?: string, 
+    productCode?: string, 
+    categoryId?: string
+  ) => {
+    try {
+      setLoading(true);
+      console.log('Updating product:', productId, name, price);
+      
+      const { data, error } = await supabase.rpc('update_product_by_id', {
+        product_id_to_update: productId,
+        new_name: name,
+        new_price: price,
+        new_description: description,
+        new_product_code: productCode,
+        new_category_id: categoryId
+      });
+      
+      if (error) {
+        console.error('Error updating product:', error);
+        throw error;
+      }
+      
+      toast({
+        title: "Produto atualizado",
+        description: "O produto foi atualizado com sucesso",
+      });
+      
+      await fetchAllProducts();
+      return true;
+    } catch (error: any) {
+      console.error('Error in updateProduct:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar produto",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAllProducts = async () => {
+    try {
+      setLoading(true);
+      console.log('Deleting all products...');
+      
+      const { data, error } = await supabase.rpc('delete_all_products');
+      
+      if (error) {
+        console.error('Error deleting all products:', error);
+        throw error;
+      }
+      
+      const deletedCount = data || 0;
+      
+      toast({
+        title: "Produtos deletados",
+        description: `${deletedCount} produto(s) e vendas relacionadas foram removidos`,
+      });
+      
+      await fetchAllProducts();
+      return deletedCount;
+    } catch (error: any) {
+      console.error('Error in deleteAllProducts:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao deletar todos os produtos",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     products,
     loading,
     fetchAllProducts,
     deleteProduct,
     updateProductStock,
+    updateProduct,
+    deleteAllProducts,
   };
 };

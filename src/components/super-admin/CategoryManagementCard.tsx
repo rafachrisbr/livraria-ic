@@ -8,9 +8,11 @@ import { FolderOpen, Trash2, Plus, AlertCircle } from "lucide-react";
 import { useCategoryManagement } from "@/hooks/useCategoryManagement";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { EditCategoryDialog } from "./EditCategoryDialog";
+import { ConfirmDeleteAllCategoriesDialog } from "./ConfirmDeleteAllCategoriesDialog";
 
 export const CategoryManagementCard = () => {
-  const { categories, loading, fetchAllCategories, deleteCategory, createCategory } = useCategoryManagement();
+  const { categories, loading, fetchAllCategories, deleteCategory, createCategory, updateCategory, deleteAllCategories } = useCategoryManagement();
   const [error, setError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
@@ -134,6 +136,12 @@ export const CategoryManagementCard = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            {categories.length > 0 && (
+              <ConfirmDeleteAllCategoriesDialog
+                onConfirm={deleteAllCategories}
+                loading={loading}
+              />
+            )}
             <Button onClick={fetchAllCategories} variant="outline" size="sm" disabled={loading}>
               {loading ? "Carregando..." : "Atualizar Lista"}
             </Button>
@@ -159,37 +167,45 @@ export const CategoryManagementCard = () => {
                     </div>
                   </div>
                   
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={loading}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Deletar Categoria</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja deletar a categoria "{category.name}"? 
-                          Só é possível deletar categorias que não possuem produtos associados.
-                          Esta ação é irreversível.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => deleteCategory(category.id)}
-                          className="bg-red-600 hover:bg-red-700"
+                  <div className="flex gap-2">
+                    <EditCategoryDialog
+                      category={category}
+                      onEdit={updateCategory}
+                      loading={loading}
+                    />
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={loading}
+                          className="text-red-600 hover:text-red-700"
                         >
-                          Deletar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Deletar Categoria</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja deletar a categoria "{category.name}"? 
+                            Só é possível deletar categorias que não possuem produtos associados.
+                            Esta ação é irreversível.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteCategory(category.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Deletar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </div>
             ))
