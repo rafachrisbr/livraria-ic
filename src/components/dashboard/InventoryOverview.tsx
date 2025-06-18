@@ -1,9 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Warehouse, AlertTriangle, Package } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 
 interface Product {
   id: string;
@@ -20,6 +19,7 @@ export const InventoryOverview = () => {
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   const [outOfStockProducts, setOutOfStockProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = useSupabase();
 
   useEffect(() => {
     fetchInventoryStatus();
@@ -36,7 +36,7 @@ export const InventoryOverview = () => {
     return () => {
       channel.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const fetchInventoryStatus = async () => {
     try {
@@ -75,8 +75,6 @@ export const InventoryOverview = () => {
       setLoading(false);
     }
   };
-
-  const totalAlertsCount = outOfStockProducts.length + lowStockProducts.length;
 
   if (loading) {
     return (

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Calendar, DollarSign, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/hooks/use-toast';
 import { DeleteSaleDialog } from './DeleteSaleDialog';
 
@@ -30,6 +30,7 @@ interface SalesListProps {
 export const SalesList = ({ refreshTrigger }: SalesListProps) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const supabase = useSupabase();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
     return () => {
       channel.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
   const fetchSales = async () => {
     try {
