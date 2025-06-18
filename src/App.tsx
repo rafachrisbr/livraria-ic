@@ -10,6 +10,12 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Welcome from "./pages/Welcome";
 import Audit from "./pages/Audit";
+import Sales from "./pages/Sales";
+import Products from "./pages/Products";
+import Promotions from "./pages/Promotions";
+import Reports from "./pages/Reports";
+import Inventory from "./pages/Inventory";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,7 +38,13 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/welcome" element={<Welcome />} />
+                <Route path="/sales" element={<Sales />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/promotions" element={<Promotions />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/inventory" element={<Inventory />} />
                 <Route path="/audit" element={<Audit />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </AuthProvider>
           </EnvironmentProvider>
