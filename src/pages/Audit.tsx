@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield, ChevronLeft, ChevronRight } from "lucide-react";
@@ -9,11 +10,25 @@ import { AuditFiltersComponent } from "@/components/audit/AuditFilters";
 import { AuditLogRow } from "@/components/audit/AuditLogRow";
 import { AuditExport } from "@/components/audit/AuditExport";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Audit = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   
+  // Verificar se o usuário é o Rafael
+  const isRafael = user?.email === 'rafael.christiano@yahoo.com.br';
+
+  // Redirecionar se não for o Rafael
+  useEffect(() => {
+    if (user && !isRafael) {
+      console.log('Acesso negado para usuário:', user.email);
+      navigate('/');
+    }
+  }, [user, isRafael, navigate]);
+
   const {
     auditLogs,
     administrators,
@@ -36,6 +51,23 @@ const Audit = () => {
     setCurrentPage(page);
     fetchAuditLogs(page);
   };
+
+  // Se não for o Rafael, não renderizar nada (redirecionamento já aconteceu)
+  if (user && !isRafael) {
+    return null;
+  }
+
+  // Se ainda estiver carregando o usuário, mostrar loading
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-500">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isMobile) {
     return (

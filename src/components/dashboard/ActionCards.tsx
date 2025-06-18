@@ -3,8 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Package, ShoppingCart, BarChart3, Shield, Plus, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 export const ActionCards = () => {
+  const { user } = useAuth();
+  
+  // Verificar se o usuário é o Rafael
+  const isRafael = user?.email === 'rafael.christiano@yahoo.com.br';
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-5 gap-6 mb-8">
 
@@ -91,25 +97,27 @@ export const ActionCards = () => {
         </CardContent>
       </Card>
 
-      {/* AUDITORIA */}
-      <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 order-5">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2 text-gray-800">
-            <Shield className="h-5 w-5" />
-            <span>Auditoria</span>
-          </CardTitle>
-          <CardDescription className="text-gray-600">
-            Controle e logs do sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link to="/audit">
-            <Button className="w-full bg-gray-600 hover:bg-gray-700">
-              Ver Auditoria
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
+      {/* AUDITORIA - Apenas para Rafael */}
+      {isRafael && (
+        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 order-5">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-gray-800">
+              <Shield className="h-5 w-5" />
+              <span>Auditoria</span>
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Controle e logs do sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link to="/audit">
+              <Button className="w-full bg-gray-600 hover:bg-gray-700">
+                Ver Auditoria
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { EnvironmentProvider } from "@/contexts/EnvironmentContext";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Welcome from "./pages/Welcome";
+import Audit from "./pages/Audit";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/welcome" element={<Welcome />} />
+              <Route path="/audit" element={<Audit />} />
             </Routes>
           </AuthProvider>
         </EnvironmentProvider>
