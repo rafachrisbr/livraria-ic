@@ -97,52 +97,61 @@ const Reports = () => {
   };
 
   const fetchPromotionSales = async () => {
-    /*
-      Para cada venda com promotion_id preenchido, buscar nome da promoção + produto, valor do desconto, e calcular preço promocional/aplicado
-    */
     try {
+      // Buscar todas as vendas que têm dados promocionais (seja pelo promotion_id ativo ou dados históricos)
       const { data, error } = await supabase
         .from("sales")
         .select(
           `
             id, quantity, unit_price, total_price, sale_date, promotion_id,
+            promotion_name, promotion_discount_type, promotion_discount_value,
             product:products(id, name),
             promotion:promotions(id, name, discount_type, discount_value)
           `
         )
-        .not("promotion_id", "is", null) // CORRIGIDO: Antes era .neq("promotion_id", null)
+        .or('promotion_id.not.is.null,promotion_name.not.is.null') // Vendas com promoção ativa OU dados históricos
         .order("sale_date", { ascending: false });
 
       if (error) throw error;
 
       const mapped: PromotionReport[] = (data || [])
-        .filter((sale: any) => !!sale.promotion_id) // Garantia extra, só processar vendas com promotion_id.
         .map((sale: any) => {
-          // Calcular o valor promocional correto, se possível:
+          // Priorizar dados históricos se disponíveis, senão usar dados da promoção ativa
+          const promotionName = sale.promotion_name || sale.promotion?.name;
+          const discountType = sale.promotion_discount_type || sale.promotion?.discount_type;
+          const discountValue = sale.promotion_discount_value || sale.promotion?.discount_value;
+
+          if (!promotionName || !discountType || discountValue === null) {
+            return null; // Filtrar vendas sem dados promocionais válidos
+          }
+
+          // Calcular o valor promocional correto
           let pricePromo = sale.unit_price;
-          if (sale.promotion?.discount_type === "percentage") {
-            pricePromo = sale.unit_price * (1 - (sale.promotion.discount_value / 100));
-          } else if (sale.promotion?.discount_type === "fixed_amount") {
-            pricePromo = Math.max(0, sale.unit_price - sale.promotion.discount_value);
+          if (discountType === "percentage") {
+            pricePromo = sale.unit_price * (1 - (discountValue / 100));
+          } else if (discountType === "fixed_amount") {
+            pricePromo = Math.max(0, sale.unit_price - discountValue);
           }
           const total_saved = (sale.unit_price - pricePromo) * sale.quantity;
 
           return {
             sale_id: sale.id,
             product_name: sale.product?.name,
-            promotion_name: sale.promotion?.name,
-            discount_type: sale.promotion?.discount_type,
-            discount_value: sale.promotion?.discount_value,
+            promotion_name: promotionName,
+            discount_type: discountType,
+            discount_value: discountValue,
             unit_price: sale.unit_price,
             promotion_price: pricePromo,
             sale_date: sale.sale_date,
             quantity: sale.quantity,
             total_saved,
           };
-        });
+        })
+        .filter(Boolean); // Remover nulls
 
       setPromotionSales(mapped);
     } catch (err: any) {
+      console.error('Erro ao buscar vendas promocionais:', err);
       toast({ title: "Erro ao buscar vendas promocionais", description: err.message, variant: "destructive" });
     }
   };
@@ -368,7 +377,7 @@ const Reports = () => {
                   <div>
                     <CardTitle className="text-slate-800">Relatório de Vendas Promocionais</CardTitle>
                     <CardDescription>
-                      Detalhe das vendas realizadas com descontos promocionais.
+                      Histórico completo de vendas realizadas com descontos promocionais.
                     </CardDescription>
                   </div>
                 </div>

@@ -226,7 +226,10 @@ export type Database = {
           notes: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
+          promotion_discount_type: string | null
+          promotion_discount_value: number | null
           promotion_id: string | null
+          promotion_name: string | null
           quantity: number
           sale_date: string
           total_price: number
@@ -239,7 +242,10 @@ export type Database = {
           notes?: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
+          promotion_discount_type?: string | null
+          promotion_discount_value?: number | null
           promotion_id?: string | null
+          promotion_name?: string | null
           quantity: number
           sale_date?: string
           total_price: number
@@ -252,7 +258,10 @@ export type Database = {
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           product_id?: string
+          promotion_discount_type?: string | null
+          promotion_discount_value?: number | null
           promotion_id?: string | null
+          promotion_name?: string | null
           quantity?: number
           sale_date?: string
           total_price?: number

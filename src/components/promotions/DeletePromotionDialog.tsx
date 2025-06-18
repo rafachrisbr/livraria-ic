@@ -28,23 +28,42 @@ export const DeletePromotionDialog = ({
     try {
       console.log('Iniciando exclusão da promoção:', promotion.id);
 
-      // Primeiro, remover a referência da promoção nas vendas (setar promotion_id como NULL)
+      // Primeiro, buscar dados da promoção que será deletada
+      const { data: promotionData, error: promotionFetchError } = await supabase
+        .from('promotions')
+        .select('name, discount_type, discount_value')
+        .eq('id', promotion.id)
+        .single();
+
+      if (promotionFetchError) {
+        console.error('Erro ao buscar dados da promoção:', promotionFetchError);
+        throw promotionFetchError;
+      }
+
+      console.log('Dados da promoção encontrados:', promotionData);
+
+      // Atualizar vendas relacionadas com dados históricos da promoção (mantendo promotion_id)
       const { error: salesUpdateError } = await supabase
         .from('sales')
-        .update({ promotion_id: null })
-        .eq('promotion_id', promotion.id);
+        .update({ 
+          promotion_name: promotionData.name,
+          promotion_discount_type: promotionData.discount_type,
+          promotion_discount_value: promotionData.discount_value
+        })
+        .eq('promotion_id', promotion.id)
+        .is('promotion_name', null); // Só atualizar se ainda não tem dados históricos
 
       if (salesUpdateError) {
-        console.error('Erro ao atualizar vendas:', salesUpdateError);
+        console.error('Erro ao preservar dados históricos nas vendas:', salesUpdateError);
         toast({ 
           title: "Erro", 
-          description: "Erro ao atualizar vendas relacionadas à promoção.", 
+          description: "Erro ao preservar dados históricos das vendas.", 
           variant: "destructive" 
         });
         return;
       }
 
-      console.log('Referências da promoção removidas das vendas');
+      console.log('Dados históricos preservados nas vendas');
 
       // Remover associações produto-promoção
       const { error: ppError } = await supabase
@@ -79,7 +98,7 @@ export const DeletePromotionDialog = ({
 
       toast({ 
         title: "Promoção excluída!", 
-        description: "A promoção foi removida com sucesso. As vendas feitas com esta promoção foram mantidas." 
+        description: "A promoção foi removida com sucesso. O histórico de vendas promocionais foi preservado." 
       });
 
       setOpen(false);
@@ -108,7 +127,7 @@ export const DeletePromotionDialog = ({
           <DialogTitle>Excluir Promoção</DialogTitle>
           <DialogDescription>
             Tem certeza que deseja excluir a promoção "{promotion.name}"? 
-            As vendas já realizadas com esta promoção serão mantidas, mas a referência à promoção será removida.
+            O histórico de vendas promocionais será preservado automaticamente.
             Esta ação não pode ser desfeita.
           </DialogDescription>
         </DialogHeader>
