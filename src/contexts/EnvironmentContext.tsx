@@ -27,7 +27,7 @@ const ENVIRONMENTS: Record<Environment, EnvironmentConfig> = {
   },
   test: {
     url: "https://llxkpxifcaykjmdxymrk.supabase.co",
-    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxseGtweGlmY2F5a2ptZHh5bXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAxNTgzMjEsImV4cCI6MjA2NTczNDMyMX0.fxp0qKcYT0hwn9Vb5mLv4b6_iCXnJFZUL9YG4y_z_Ks"
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxseGtweGlmY2F5a2ptZHh5bXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwODYwMTgsImV4cCI6MjA2NTY2MjAxOH0.NuhBjxHiw_9SNlKwSw-ddqxhqissq-t4oqUDgl5xe3o"
   }
 };
 
@@ -43,6 +43,7 @@ export const EnvironmentProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const setEnvironment = (env: Environment) => {
+    console.log(`Mudando ambiente para: ${env}`);
     setEnvironmentState(env);
     localStorage.setItem('environment', env);
     
@@ -50,6 +51,8 @@ export const EnvironmentProvider = ({ children }: { children: ReactNode }) => {
     const config = ENVIRONMENTS[env];
     const newClient = createClient<Database>(config.url, config.anonKey);
     setSupabaseClient(newClient);
+    
+    console.log(`Cliente Supabase atualizado para ${env}: ${config.url}`);
   };
 
   useEffect(() => {
@@ -57,6 +60,7 @@ export const EnvironmentProvider = ({ children }: { children: ReactNode }) => {
     const config = ENVIRONMENTS[environment];
     const newClient = createClient<Database>(config.url, config.anonKey);
     setSupabaseClient(newClient);
+    console.log(`Ambiente carregado: ${environment}`);
   }, [environment]);
 
   const value = {

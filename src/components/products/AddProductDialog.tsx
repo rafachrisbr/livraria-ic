@@ -84,16 +84,17 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
 
       if (error) throw error;
 
-      // Log da auditoria
-      await supabase.rpc('log_audit_action', {
-        p_action_type: 'CREATE',
-        p_table_name: 'products',
-        p_record_id: data.id,
-        p_details: {
+      // Log manual da auditoria (sem usar a função RPC que não existe)
+      await supabase.from('audit_logs').insert({
+        action_type: 'CREATE',
+        table_name: 'products',
+        record_id: data.id,
+        details: {
           name: formData.name,
           price: parseFloat(formData.price),
           stock_quantity: parseInt(formData.stock_quantity)
-        }
+        },
+        user_id: (await supabase.auth.getUser()).data.user?.id || ''
       });
 
       toast({
@@ -135,7 +136,12 @@ export const AddProductDialog = ({ onProductAdded, trigger }: AddProductDialogPr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || defaultTrigger}
+        {trigger || (
+          <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+            <Plus className="h-4 w-4 mr-2" />
+            Cadastrar Produto
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

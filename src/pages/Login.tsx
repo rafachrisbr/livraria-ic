@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -16,9 +15,9 @@ const Login = () => {
   const [showSignUp, setShowSignUp] = useState(false);
   const { signIn, signUp, loading, user, isAdmin } = useAuth();
 
-  // Se já está logado e é admin, redireciona para dashboard
+  // Se já está logado e é admin, redireciona para página de boas-vindas
   if (user && isAdmin) {
-    window.location.href = '/';
+    window.location.href = '/welcome';
     return null;
   }
 
@@ -76,8 +75,9 @@ const Login = () => {
     } else {
       toast({
         title: "Login realizado com sucesso!",
-        description: "Carregando sistema...",
+        description: "Redirecionando...",
       });
+      // Redirecionar para página de boas-vindas será feito pelo useEffect acima
     }
   };
 

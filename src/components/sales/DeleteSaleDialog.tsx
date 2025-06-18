@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   AlertDialog,
@@ -60,16 +59,17 @@ export const DeleteSaleDialog = ({
 
       console.log('Dados da venda encontrados:', sale);
 
-      // Log da auditoria antes de excluir
-      await supabase.rpc('log_audit_action', {
-        p_action_type: 'DELETE',
-        p_table_name: 'sales',
-        p_record_id: saleId,
-        p_details: {
+      // Log manual da auditoria antes de excluir
+      await supabase.from('audit_logs').insert({
+        action_type: 'DELETE',
+        table_name: 'sales',
+        record_id: saleId,
+        details: {
           product_name: productName,
           quantity: sale.quantity,
           total_price: totalPrice,
         },
+        user_id: (await supabase.auth.getUser()).data.user?.id || ''
       });
 
       // Excluir a venda
