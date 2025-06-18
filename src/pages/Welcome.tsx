@@ -1,4 +1,5 @@
 
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,7 +52,7 @@ const Welcome = () => {
               Bem-vindo, {getUserName()}!
             </p>
             <p className="text-sm text-gray-600 mt-2">
-              Você foi autenticado com sucesso no sistema da Livraria Imaculada Conceição.
+              Você foi autenticado com sucesso no sistema da Gestão da Livraria IC.
             </p>
           </div>
 

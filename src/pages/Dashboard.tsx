@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,7 +46,7 @@ const Dashboard = () => {
       <div className="min-h-screen bg-slate-50">
         <MobileHeader 
           title="Painel" 
-          subtitle="Livraria Imaculada Conceição" 
+          subtitle="Gestão da Livraria IC" 
         />
         
         <main className="px-4 py-6 space-y-6">

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ const Sales = () => {
               </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Registrar Vendas</h1>
-                <p className="text-gray-600">Livraria Imaculada Conceição</p>
+                <p className="text-gray-600">Gestão da Livraria IC</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">

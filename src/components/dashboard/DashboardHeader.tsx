@@ -26,7 +26,7 @@ export const DashboardHeader = () => {
                 </span>
               )}
             </div>
-            <p className="text-gray-600">Livraria Imaculada Conceição</p>
+            <p className="text-gray-600">Gestão da Livraria IC</p>
           </div>
           <div className="flex items-center space-x-4">
             <EnvironmentToggle />

@@ -1,4 +1,5 @@
 
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -56,7 +57,7 @@ export const MobileNavigation = () => {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Livraria Imaculada Conceição
+              Gestão da Livraria IC
             </p>
           </div>
           

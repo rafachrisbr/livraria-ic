@@ -1,4 +1,5 @@
 
+
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield, ChevronLeft, ChevronRight } from "lucide-react";
@@ -167,7 +168,7 @@ const Audit = () => {
               </Link>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Auditoria do Sistema</h1>
-                <p className="text-gray-600">Livraria Imaculada Conceição</p>
+                <p className="text-gray-600">Gestão da Livraria IC</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
