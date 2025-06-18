@@ -291,6 +291,35 @@ export type Database = {
         Args: { user_id: string }
         Returns: boolean
       }
+      log_audit_action: {
+        Args:
+          | {
+              p_action_type: string
+              p_table_name: string
+              p_record_id?: string
+              p_details?: Json
+            }
+          | {
+              p_action_type: string
+              p_table_name: string
+              p_record_id?: string
+              p_details?: Json
+              p_old_values?: Json
+              p_new_values?: Json
+              p_ip_address?: unknown
+              p_user_agent?: string
+            }
+        Returns: undefined
+      }
+      log_auth_event: {
+        Args: {
+          p_event_type: string
+          p_details?: Json
+          p_ip_address?: unknown
+          p_user_agent?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       payment_method:
@@ -299,6 +328,7 @@ export type Database = {
         | "cartao_credito"
         | "pix"
         | "outros"
+      product_category: "livros" | "artigos_religiosos"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -421,6 +451,7 @@ export const Constants = {
         "pix",
         "outros",
       ],
+      product_category: ["livros", "artigos_religiosos"],
     },
   },
 } as const
