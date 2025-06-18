@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, ShoppingCart, BarChart3, DollarSign, TrendingDown, Percent } from 'lucide-react';
@@ -258,22 +257,22 @@ export const StatsCards = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-1">
-            {stats.totalPromotionSavings > 0 && (
-              <div className="text-sm text-gray-500 line-through">
-                R$ {stats.totalStockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </div>
-            )}
             <div className="text-2xl font-bold text-purple-900">
-              R$ {stats.totalStockValueWithPromotions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R$ {stats.totalStockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
             {stats.totalPromotionSavings > 0 ? (
-              <p className="text-xs text-green-600 flex items-center mt-1">
-                <Percent className="h-3 w-3 mr-1" />
-                Economia: R$ {stats.totalPromotionSavings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (promoções)
-              </p>
+              <div className="space-y-1">
+                <div className="text-sm text-gray-600">
+                  Com desconto: R$ {stats.totalStockValueWithPromotions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+                <p className="text-xs text-orange-600 flex items-center">
+                  <TrendingDown className="h-3 w-3 mr-1" />
+                  Desconto concedido: R$ {stats.totalPromotionSavings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
             ) : (
               <p className="text-xs text-purple-600 flex items-center mt-1">
-                <TrendingDown className="h-3 w-3 mr-1" />
+                <BarChart3 className="h-3 w-3 mr-1" />
                 Valor total em estoque
               </p>
             )}
