@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ShoppingCart, Trash2, Edit, CreditCard } from 'lucide-react';
+import { ShoppingCart, CreditCard } from 'lucide-react';
 import { useSupabase } from '@/hooks/useSupabase';
 import { useToast } from '@/hooks/use-toast';
 import { DeleteSaleDialog } from './DeleteSaleDialog';
@@ -263,6 +262,9 @@ export const SalesList = ({ refreshTrigger }: SalesListProps) => {
                       <div className="flex space-x-2">
                         <DeleteSaleDialog 
                           saleId={sale.id}
+                          productName={sale.products?.name || 'Produto'}
+                          quantity={sale.quantity}
+                          totalPrice={sale.total_price}
                           onSaleDeleted={fetchSales}
                         />
                       </div>
