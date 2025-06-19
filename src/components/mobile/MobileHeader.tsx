@@ -3,8 +3,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, Menu } from 'lucide-react';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
-import { EnvironmentToggle } from '@/components/environment/EnvironmentToggle';
-import { useEnvironment } from '@/contexts/EnvironmentContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,14 +18,13 @@ interface MobileHeaderProps {
 
 export const MobileHeader = ({ title, subtitle }: MobileHeaderProps) => {
   const { user, signOut } = useAuth();
-  const { isTestMode } = useEnvironment();
 
   const handleLogout = async () => {
     await signOut();
   };
 
   return (
-    <header className={`shadow-sm border-b border-slate-200 safe-area-top ${isTestMode ? 'bg-orange-50' : 'bg-white'}`}>
+    <header className="bg-white shadow-sm border-b border-slate-200 safe-area-top">
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -40,14 +37,7 @@ export const MobileHeader = ({ title, subtitle }: MobileHeaderProps) => {
               }}
             />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold text-gray-900 truncate">{title}</h1>
-                {isTestMode && (
-                  <span className="px-1.5 py-0.5 text-xs font-semibold bg-orange-200 text-orange-800 rounded flex-shrink-0">
-                    TESTE
-                  </span>
-                )}
-              </div>
+              <h1 className="text-lg font-bold text-gray-900 truncate">{title}</h1>
               {subtitle && <p className="text-sm text-gray-600 truncate">{subtitle}</p>}
             </div>
           </div>
@@ -61,10 +51,6 @@ export const MobileHeader = ({ title, subtitle }: MobileHeaderProps) => {
             <DropdownMenuContent align="end" className="w-56">
               <div className="px-2 py-1.5 text-sm text-gray-600 truncate">
                 {user?.email}
-              </div>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-2">
-                <EnvironmentToggle />
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>

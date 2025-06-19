@@ -3,11 +3,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Loader2 } from 'lucide-react';
-import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 const Welcome = () => {
   const { user } = useAuth();
-  const { environment, isTestMode } = useEnvironment();
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
@@ -86,17 +84,6 @@ const Welcome = () => {
                 Você foi autenticado com sucesso no sistema da Gestão da Livraria IC.
               </p>
             </div>
-
-            {isTestMode && (
-              <div className="p-3 bg-orange-100 border border-orange-200 rounded-lg">
-                <p className="text-sm text-orange-800 font-medium">
-                  🧪 Modo de Teste Ativo
-                </p>
-                <p className="text-xs text-orange-700 mt-1">
-                  Você está conectado ao ambiente de teste
-                </p>
-              </div>
-            )}
 
             <div className="pt-4 border-t border-gray-200">
               <div className="flex items-center justify-center space-x-2 text-blue-600">
