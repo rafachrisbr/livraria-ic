@@ -36,15 +36,6 @@ export const DashboardHeader = () => {
                 )}
               </div>
               <p className="text-gray-600">Gestão da Livraria IC</p>
-              
-              {/* Imagem decorativa da Imaculada Conceição - visível apenas em desktop */}
-              <div className="hidden lg:block absolute top-4 right-4 opacity-10 pointer-events-none">
-                <img 
-                  src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
-                  alt="Imaculada Conceição"
-                  className="h-16 w-auto object-contain"
-                />
-              </div>
             </div>
           </div>
           <div className="flex items-center space-x-4">
