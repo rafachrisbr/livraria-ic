@@ -15,46 +15,8 @@ const Login = () => {
   const [name, setName] = useState('');
   const [accessKey, setAccessKey] = useState('');
   const [showSignUp, setShowSignUp] = useState(false);
-  const { signIn, signUp, loading, user, isAdmin } = useAuth();
+  const { signIn, signUp, loading } = useAuth();
   const navigate = useNavigate();
-
-  // Se já está logado e é admin, vai para welcome
-  if (user && isAdmin && !loading) {
-    navigate('/welcome');
-    return null;
-  }
-
-  // Se está logado mas não é admin, faz logout silencioso e recarrega
-  if (user && !loading && !isAdmin) {
-    console.log('User is not admin, performing silent logout...');
-    // Fazer logout silencioso sem mostrar tela de acesso negado
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 100);
-    return null;
-  }
-
-  // Se está carregando, mostra loading simples
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center text-blue-600">Carregando</CardTitle>
-            <CardDescription className="text-center">
-              Verificando autenticação...
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center space-x-2">
-              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-              <span className="text-sm text-gray-600">Aguarde...</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,12 +41,17 @@ const Login = () => {
         variant: "destructive",
       });
     } else {
-      console.log('Login successful!');
+      console.log('Login successful! Marking as just logged in and redirecting...');
+      // Marcar que o usuário acabou de fazer login
+      sessionStorage.setItem('justLoggedIn', 'true');
       toast({
         title: "Login realizado com sucesso!",
         description: "Redirecionando...",
       });
-      // O redirecionamento será feito automaticamente pelo useEffect acima
+      // Redirecionar programaticamente para welcome
+      setTimeout(() => {
+        navigate('/welcome');
+      }, 500);
     }
   };
 

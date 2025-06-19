@@ -22,30 +22,29 @@ const LoadingScreen = () => {
   useEffect(() => {
     console.log('LoadingScreen mounted, starting loading process...');
     
-    // Controlar progresso da barra com tempo mínimo garantido
+    // Controlar progresso da barra - mais lento para garantir tempo mínimo
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(progressInterval);
           return 100;
         }
-        return prev + 1.5; // Mais lento para garantir tempo mínimo
+        return prev + 1.25; // Mais lento para dar 8 segundos
       });
-    }, 120); // Intervalo maior
+    }, 100);
 
     // Controlar mensagens rotativas
     const messageInterval = setInterval(() => {
       setCurrentMessage(prev => (prev + 1) % loadingMessages.length);
-    }, 1200);
+    }, 1500);
 
-    // Tempo mínimo de 8 segundos para mostrar conclusão e redirecionar
+    // Tempo GARANTIDO de 8 segundos para mostrar conclusão e redirecionar
     const redirectTimer = setTimeout(() => {
       console.log('Loading complete, showing completion message...');
       setShowComplete(true);
       setTimeout(() => {
         console.log('Redirecting to dashboard...');
-        // Marcar que passou pela tela de welcome para não mostrar novamente
-        sessionStorage.setItem('welcomeShown', 'true');
+        // Navegar direto para a home, que agora vai mostrar o dashboard
         navigate('/');
       }, 2000);
     }, 8000);

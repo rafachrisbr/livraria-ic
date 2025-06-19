@@ -23,7 +23,9 @@ const AuthCallback = () => {
         }
 
         if (data.session) {
-          console.log('Auth callback successful, redirecting to welcome...');
+          console.log('Auth callback successful, marking as just logged in and redirecting to welcome...');
+          // Marcar que o usuário acabou de confirmar email/fazer login
+          sessionStorage.setItem('justLoggedIn', 'true');
           // Aguardar um pouco para garantir que o estado seja atualizado
           setTimeout(() => {
             navigate('/welcome');
