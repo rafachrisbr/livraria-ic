@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,17 +15,48 @@ const Login = () => {
   const [name, setName] = useState('');
   const [accessKey, setAccessKey] = useState('');
   const [showSignUp, setShowSignUp] = useState(false);
+  const [isCheckingAdmin, setIsCheckingAdmin] = useState(false);
   const { signIn, signUp, loading, user, isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  // Se já está logado e é admin, redireciona para welcome para mostrar o fluxo
-  if (user && isAdmin && !loading) {
+  // Detectar quando o usuário faz login e iniciar verificação de admin
+  useEffect(() => {
+    if (user && !isCheckingAdmin) {
+      console.log('User logged in, starting admin check...');
+      setIsCheckingAdmin(true);
+      
+      // Timeout de segurança para não ficar preso na verificação
+      const timeout = setTimeout(() => {
+        console.log('Admin check timeout reached');
+        setIsCheckingAdmin(false);
+      }, 3000);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [user, isCheckingAdmin]);
+
+  // Quando a verificação de admin estiver completa
+  useEffect(() => {
+    if (user && isCheckingAdmin && !loading) {
+      console.log('Admin check completed. IsAdmin:', isAdmin);
+      setIsCheckingAdmin(false);
+      
+      if (isAdmin) {
+        console.log('User is admin, redirecting to welcome...');
+        navigate('/welcome');
+      }
+      // Se não é admin, não fazemos nada aqui - deixamos mostrar a mensagem de acesso negado
+    }
+  }, [user, isAdmin, loading, isCheckingAdmin, navigate]);
+
+  // Se já está logado e é admin, redireciona para welcome
+  if (user && isAdmin && !loading && !isCheckingAdmin) {
     navigate('/welcome');
     return null;
   }
 
-  // Se já está logado mas ainda verificando status de admin, mostra loading
-  if (user && loading) {
+  // Se está verificando se é admin, mostra loading específico
+  if (user && isCheckingAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom">
         <Card className="w-full max-w-md">
@@ -33,6 +64,28 @@ const Login = () => {
             <CardTitle className="text-center text-blue-600">Verificando Permissões</CardTitle>
             <CardDescription className="text-center">
               Verificando suas permissões de administrador...
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center space-x-2">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              <span className="text-sm text-gray-600">Verificando...</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Se está logado, verificação foi concluída, mas ainda carregando outras coisas
+  if (user && loading && !isCheckingAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center text-blue-600">Carregando</CardTitle>
+            <CardDescription className="text-center">
+              Finalizando autenticação...
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -46,8 +99,8 @@ const Login = () => {
     );
   }
 
-  // Se já está logado e não é admin (após verificação completa), mostra mensagem específica
-  if (user && !loading && !isAdmin) {
+  // APENAS AQUI mostramos "Acesso Negado" - quando temos certeza de que não é admin
+  if (user && !loading && !isAdmin && !isCheckingAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom">
         <Card className="w-full max-w-md">
@@ -98,15 +151,12 @@ const Login = () => {
         variant: "destructive",
       });
     } else {
-      console.log('Login successful, redirecting to welcome...');
+      console.log('Login successful!');
       toast({
         title: "Login realizado com sucesso!",
-        description: "Redirecionando...",
+        description: "Verificando permissões...",
       });
-      // Redirecionar programaticamente após login bem-sucedido
-      setTimeout(() => {
-        navigate('/welcome');
-      }, 500);
+      // Não redirecionamos aqui - deixamos o useEffect handle isso após verificar admin
     }
   };
 
