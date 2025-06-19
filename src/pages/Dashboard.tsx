@@ -60,7 +60,7 @@ const Dashboard = () => {
           </div>
           
           <div className="relative z-10">
-            <WelcomeSection userEmail={user?.email} />
+            <WelcomeSection />
             <StatsCards />
             <ActionCards />
             <div className="space-y-6">
@@ -89,7 +89,7 @@ const Dashboard = () => {
         </div>
         
         <div className="relative z-10">
-          <WelcomeSection userEmail={user?.email} />
+          <WelcomeSection />
           <StatsCards />
           <ActionCards />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
