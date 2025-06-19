@@ -2,12 +2,14 @@
 import { useEffect, useState } from 'react';
 import { Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const LoadingScreen = () => {
   const { user } = useAuth();
   const [progress, setProgress] = useState(0);
   const [currentMessage, setCurrentMessage] = useState(0);
   const [showComplete, setShowComplete] = useState(false);
+  const navigate = useNavigate();
 
   const loadingMessages = [
     "Carregando dados do sistema...",
@@ -18,6 +20,8 @@ const LoadingScreen = () => {
   ];
 
   useEffect(() => {
+    console.log('LoadingScreen mounted, starting loading process...');
+    
     // Controlar progresso da barra
     const progressInterval = setInterval(() => {
       setProgress(prev => {
@@ -36,18 +40,21 @@ const LoadingScreen = () => {
 
     // Mostrar conclusão e redirecionar após 5 segundos
     const redirectTimer = setTimeout(() => {
+      console.log('Loading complete, showing completion message...');
       setShowComplete(true);
       setTimeout(() => {
-        window.location.href = '/';
+        console.log('Redirecting to dashboard...');
+        navigate('/');
       }, 1000);
     }, 5000);
 
     return () => {
+      console.log('LoadingScreen cleanup');
       clearInterval(progressInterval);
       clearInterval(messageInterval);
       clearTimeout(redirectTimer);
     };
-  }, []);
+  }, [navigate]);
 
   const getUserName = () => {
     if (user?.user_metadata?.name) {

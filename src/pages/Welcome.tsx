@@ -3,25 +3,33 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Welcome = () => {
   const { user } = useAuth();
   const [countdown, setCountdown] = useState(3);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('Welcome page mounted, starting countdown...');
+    
     const timer = setInterval(() => {
       setCountdown((prev) => {
+        console.log('Countdown:', prev);
         if (prev <= 1) {
-          // Redirecionar para a tela de loading em vez do dashboard diretamente
-          window.location.href = '/loading';
+          console.log('Countdown finished, redirecting to loading...');
+          navigate('/loading');
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, []);
+    return () => {
+      console.log('Welcome page cleanup');
+      clearInterval(timer);
+    };
+  }, [navigate]);
 
   const getUserName = () => {
     if (user?.user_metadata?.name) {

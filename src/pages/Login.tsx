@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -14,10 +16,11 @@ const Login = () => {
   const [accessKey, setAccessKey] = useState('');
   const [showSignUp, setShowSignUp] = useState(false);
   const { signIn, signUp, loading, user, isAdmin } = useAuth();
+  const navigate = useNavigate();
 
-  // Se já está logado e é admin, redireciona para página de boas-vindas
-  if (user && isAdmin) {
-    window.location.href = '/welcome';
+  // Se já está logado e é admin, redireciona para welcome para mostrar o fluxo
+  if (user && isAdmin && !loading) {
+    navigate('/welcome');
     return null;
   }
 
@@ -84,6 +87,7 @@ const Login = () => {
       return;
     }
 
+    console.log('Attempting login for:', email);
     const { error } = await signIn(email, password);
     
     if (error) {
@@ -94,10 +98,15 @@ const Login = () => {
         variant: "destructive",
       });
     } else {
+      console.log('Login successful, redirecting to welcome...');
       toast({
         title: "Login realizado com sucesso!",
-        description: "Verificando permissões...",
+        description: "Redirecionando...",
       });
+      // Redirecionar programaticamente após login bem-sucedido
+      setTimeout(() => {
+        navigate('/welcome');
+      }, 500);
     }
   };
 
