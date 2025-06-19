@@ -57,7 +57,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: NodeJS.Timeout;
 
     // Timeout de segurança para evitar loading infinito
     const safetyTimeout = setTimeout(() => {
@@ -65,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('Safety timeout reached, setting loading to false');
         setLoading(false);
       }
-    }, 10000); // 10 segundos
+    }, 8000); // 8 segundos
 
     const initializeAuth = async () => {
       try {
@@ -83,18 +82,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(initialSession?.user ?? null);
           
           if (initialSession?.user) {
-            // Defer admin check to avoid blocking
-            timeoutId = setTimeout(() => {
+            // Aguardar um pouco antes de verificar admin para evitar problemas
+            setTimeout(() => {
               if (mounted) {
                 checkAdminStatus(initialSession.user.id);
               }
-            }, 100);
+            }, 500);
           } else {
             setIsAdmin(false);
           }
           
-          setLoading(false);
-          clearTimeout(safetyTimeout);
+          // Dar um tempo mínimo para loading
+          setTimeout(() => {
+            if (mounted) {
+              setLoading(false);
+              clearTimeout(safetyTimeout);
+            }
+          }, 1000);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -118,18 +122,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user && event === 'SIGNED_IN') {
-          // Defer admin check to prevent blocking
-          timeoutId = setTimeout(() => {
+          // Aguardar um pouco antes de verificar admin
+          setTimeout(() => {
             if (mounted) {
               checkAdminStatus(session.user.id);
             }
-          }, 100);
+          }, 500);
         } else {
           setIsAdmin(false);
         }
         
-        setLoading(false);
-        clearTimeout(safetyTimeout);
+        // Dar um tempo mínimo para loading
+        setTimeout(() => {
+          if (mounted) {
+            setLoading(false);
+            clearTimeout(safetyTimeout);
+          }
+        }, 1000);
       }
     );
 
@@ -139,7 +148,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
       clearTimeout(safetyTimeout);
-      if (timeoutId) clearTimeout(timeoutId);
     };
   }, [supabase]);
 
@@ -180,7 +188,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/auth-callback`,
           data: {
             name: name || '',
             email: email

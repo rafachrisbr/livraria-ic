@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Login from './Login';
@@ -8,22 +7,15 @@ import { Loader2 } from 'lucide-react';
 const Index = () => {
   const { user, loading, isAdmin } = useAuth();
   const [showContent, setShowContent] = useState(false);
-  const [hasShownWelcome, setHasShownWelcome] = useState(false);
 
   useEffect(() => {
     console.log('Index component - User:', user?.email || 'undefined', 'Admin:', isAdmin, 'Loading:', loading);
-    
-    // Verificar se o usuário já passou pela tela de welcome nesta sessão
-    const sessionWelcomeShown = sessionStorage.getItem('welcomeShown');
-    if (sessionWelcomeShown === 'true') {
-      setHasShownWelcome(true);
-    }
     
     // Timeout de segurança para mostrar conteúdo mesmo se loading não resolver
     const timeout = setTimeout(() => {
       console.log('Safety timeout - showing content');
       setShowContent(true);
-    }, 5000);
+    }, 3000);
 
     if (!loading) {
       setShowContent(true);
@@ -47,9 +39,7 @@ const Index = () => {
 
   // If user is logged in and is an admin, show dashboard
   if (user && isAdmin) {
-    console.log('Showing dashboard for admin user, welcomeShown:', hasShownWelcome);
-    // Se já passou pela tela de welcome nesta sessão, vai direto pro dashboard
-    // Se não passou, será redirecionado pelo Login.tsx para /welcome
+    console.log('Showing dashboard for admin user');
     return <Dashboard />;
   }
 

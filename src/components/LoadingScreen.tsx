@@ -22,31 +22,33 @@ const LoadingScreen = () => {
   useEffect(() => {
     console.log('LoadingScreen mounted, starting loading process...');
     
-    // Controlar progresso da barra
+    // Controlar progresso da barra com tempo mínimo garantido
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(progressInterval);
           return 100;
         }
-        return prev + 2;
+        return prev + 1.5; // Mais lento para garantir tempo mínimo
       });
-    }, 100);
+    }, 120); // Intervalo maior
 
     // Controlar mensagens rotativas
     const messageInterval = setInterval(() => {
       setCurrentMessage(prev => (prev + 1) % loadingMessages.length);
-    }, 1000);
+    }, 1200);
 
-    // Mostrar conclusão e redirecionar após 5 segundos
+    // Tempo mínimo de 8 segundos para mostrar conclusão e redirecionar
     const redirectTimer = setTimeout(() => {
       console.log('Loading complete, showing completion message...');
       setShowComplete(true);
       setTimeout(() => {
         console.log('Redirecting to dashboard...');
+        // Marcar que passou pela tela de welcome para não mostrar novamente
+        sessionStorage.setItem('welcomeShown', 'true');
         navigate('/');
-      }, 1000);
-    }, 5000);
+      }, 2000);
+    }, 8000);
 
     return () => {
       console.log('LoadingScreen cleanup');
@@ -117,9 +119,9 @@ const LoadingScreen = () => {
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
                   <div 
-                    className="bg-blue-500 h-2 rounded-full transition-all duration-100 ease-out"
+                    className="bg-blue-500 h-3 rounded-full transition-all duration-150 ease-out"
                     style={{ width: `${progress}%` }}
                   ></div>
                 </div>

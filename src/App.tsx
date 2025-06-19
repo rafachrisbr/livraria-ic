@@ -9,6 +9,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Welcome from "./pages/Welcome";
 import LoadingScreen from "./components/LoadingScreen";
+import AuthCallback from "./pages/AuthCallback";
 import Audit from "./pages/Audit";
 import Sales from "./pages/Sales";
 import Products from "./pages/Products";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/loading" element={<LoadingScreen />} />
+              <Route path="/auth-callback" element={<AuthCallback />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/products" element={<Products />} />
               <Route path="/promotions" element={<Promotions />} />
