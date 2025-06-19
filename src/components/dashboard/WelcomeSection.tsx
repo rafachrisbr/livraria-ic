@@ -1,71 +1,54 @@
 
-import { Calendar } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
+import { BookOpen, Heart } from 'lucide-react';
 
-interface WelcomeSectionProps {
-  userEmail?: string;
-}
+export const WelcomeSection = () => {
+  const { user } = useAuth();
 
-export const WelcomeSection = ({ userEmail }: WelcomeSectionProps) => {
-  const [name, setName] = useState<string | null>(null);
+  const getUserName = () => {
+    if (user?.user_metadata?.name) {
+      return user.user_metadata.name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'Administrador';
+  };
 
-  useEffect(() => {
-    const fetchName = async () => {
-      try {
-        // Só faz a busca se tiver e-mail
-        if (!userEmail) {
-          setName(null);
-          return;
-        }
-        // Busca o registro do administrador pelo e-mail da sessão
-        const { data, error } = await supabase
-          .from('administrators')
-          .select('name')
-          .eq('email', userEmail)
-          .maybeSingle();
-
-        if (error) {
-          setName(null);
-          return;
-        }
-        setName(data?.name ?? null);
-      } catch {
-        setName(null);
-      }
-    };
-
-    fetchName();
-  }, [userEmail]);
-
-  // Se não conseguir buscar o nome, usa só "Usuário" para fallback
-  const userName = name || 'Usuário';
-  
   return (
-    <div className="mb-10">
-      <div className="bg-gradient-to-r from-slate-700 to-slate-800 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-12 -mb-12"></div>
-        <div className="relative z-10">
-          <h2 className="text-4xl font-bold mb-3">
-            Bem-vindo, {userName}
-          </h2>
-          <p className="text-slate-200 text-lg">
-            Visão geral da livraria
-          </p>
-          <div className="flex items-center mt-4 space-x-2">
-            <Calendar className="h-4 w-4" />
-            <span className="text-sm text-slate-200">
-              {new Date().toLocaleDateString('pt-BR', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </span>
+    <div className="mb-8">
+      <Card className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl border-0">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+                Bem-vindo, {getUserName()}!
+              </h1>
+              <p className="text-blue-100 text-sm sm:text-base">
+                Sistema de Gestão da Livraria Imaculada Conceição
+              </p>
+              <p className="text-blue-200 text-xs sm:text-sm mt-1">
+                Capela Imaculada Conceição - Indaiatuba, SP
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center space-x-3">
+              <div className="p-3 bg-white/20 rounded-lg">
+                <BookOpen className="h-8 w-8" />
+              </div>
+              <div className="p-2 bg-white/10 rounded-lg">
+                <Heart className="h-6 w-6" />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+          
+          <div className="mt-4 pt-4 border-t border-blue-500/30">
+            <p className="text-blue-100 text-xs text-center">
+              "Sub tuum praesidium confugimus, Sancta Dei Genetrix"
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,35 +1,13 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Loader2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { CheckCircle, Heart } from 'lucide-react';
 
 const Welcome = () => {
   const { user } = useAuth();
-  const [countdown, setCountdown] = useState(3);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    console.log('Welcome page mounted, starting countdown...');
-    
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        console.log('Countdown:', prev);
-        if (prev <= 1) {
-          console.log('Countdown finished, redirecting to loading...');
-          navigate('/loading');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      console.log('Welcome page cleanup');
-      clearInterval(timer);
-    };
-  }, [navigate]);
 
   const getUserName = () => {
     if (user?.user_metadata?.name) {
@@ -38,8 +16,22 @@ const Welcome = () => {
     if (user?.email) {
       return user.email.split('@')[0];
     }
-    return 'Usuário';
+    return 'Administrador';
   };
+
+  useEffect(() => {
+    console.log('Welcome page mounted, starting 3 second timer...');
+    
+    const timer = setTimeout(() => {
+      console.log('Welcome timer complete, redirecting to loading...');
+      navigate('/loading');
+    }, 3000);
+
+    return () => {
+      console.log('Welcome page cleanup');
+      clearTimeout(timer);
+    };
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom relative overflow-hidden">
@@ -65,7 +57,7 @@ const Welcome = () => {
           />
         </div>
 
-        <Card className="text-center relative overflow-hidden bg-white/95 backdrop-blur-sm border border-white/20 shadow-xl">
+        <div className="text-center space-y-6 bg-white/95 backdrop-blur-sm border border-white/20 shadow-xl rounded-lg p-8 relative overflow-hidden">
           {/* Background decoration */}
           <div className="absolute top-0 right-0 opacity-10">
             <img 
@@ -75,40 +67,45 @@ const Welcome = () => {
             />
           </div>
           
-          <CardHeader className="relative z-10">
+          <div className="relative z-10">
             <div className="flex justify-center mb-4">
-              <CheckCircle className="h-12 sm:h-16 w-12 sm:w-16 text-green-500" />
-            </div>
-            <CardTitle className="text-xl sm:text-2xl text-green-600">
-              Login Realizado com Sucesso!
-            </CardTitle>
-          </CardHeader>
-          
-          <CardContent className="space-y-4 relative z-10">
-            <div>
-              <p className="text-lg font-medium text-gray-800">
-                Bem-vindo, {getUserName()}!
-              </p>
-              <p className="text-sm text-gray-600 mt-2">
-                Você foi autenticado com sucesso no sistema da Gestão da Livraria IC.
-              </p>
-            </div>
-
-            <div className="pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-center space-x-2 text-blue-600">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">
-                  Preparando sistema em {countdown}s...
-                </span>
+              <div className="relative">
+                <CheckCircle className="h-16 w-16 text-green-500" />
+                <div className="absolute -top-1 -right-1">
+                  <Heart className="h-6 w-6 text-red-500 animate-pulse" />
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            
+            <div>
+              <h1 className="text-2xl font-bold text-green-600 mb-2">
+                Login Realizado com Sucesso!
+              </h1>
+              <p className="text-gray-600 mb-4">
+                Bem-vindo, {getUserName()}
+              </p>
+              <p className="text-sm text-gray-500">
+                Preparando o sistema da Livraria Imaculada Conceição...
+              </p>
+            </div>
 
-        {/* Catholic decoration for mobile */}
-        <div className="text-center sm:hidden">
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center justify-center space-x-2 text-green-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm">Sistema autenticado</span>
+              </div>
+              <div className="flex items-center justify-center space-x-2 text-blue-600">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+                <span className="text-sm">Carregando painel administrativo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Catholic decoration */}
+        <div className="text-center">
           <p className="text-xs text-blue-600 opacity-60">
-            Sub tuum praesidium confugimus
+            Imaculada Conceição, rogai por nós
           </p>
         </div>
       </div>

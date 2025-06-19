@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const cleanupAuthState = () => {
@@ -39,4 +38,40 @@ export const performCleanSignOut = async () => {
     // Force reload even on error
     window.location.href = '/';
   }
+};
+
+// Adicionar função para limpar cache completo em produção
+export const clearProductionCache = () => {
+  try {
+    // Limpar localStorage
+    localStorage.clear();
+    
+    // Limpar sessionStorage
+    sessionStorage.clear();
+    
+    // Limpar cache do service worker se existir
+    if ('caches' in window) {
+      caches.keys().then(cacheNames => {
+        cacheNames.forEach(cacheName => {
+          caches.delete(cacheName);
+        });
+      });
+    }
+    
+    console.log('Production cache cleared successfully');
+  } catch (error) {
+    console.error('Error clearing production cache:', error);
+  }
+};
+
+// Função para preparar sistema para produção
+export const prepareForProduction = () => {
+  clearProductionCache();
+  
+  // Remover flags de desenvolvimento
+  sessionStorage.removeItem('justLoggedIn');
+  sessionStorage.removeItem('developmentMode');
+  localStorage.removeItem('debug');
+  
+  console.log('System prepared for production');
 };
