@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Welcome from "./pages/Welcome";
+import LoadingScreen from "./components/LoadingScreen";
 import Audit from "./pages/Audit";
 import Sales from "./pages/Sales";
 import Products from "./pages/Products";
@@ -37,6 +38,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/welcome" element={<Welcome />} />
+              <Route path="/loading" element={<LoadingScreen />} />
               <Route path="/sales" element={<Sales />} />
               <Route path="/products" element={<Products />} />
               <Route path="/promotions" element={<Promotions />} />

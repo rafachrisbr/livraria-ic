@@ -12,7 +12,8 @@ const Welcome = () => {
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          window.location.href = '/';
+          // Redirecionar para a tela de loading em vez do dashboard diretamente
+          window.location.href = '/loading';
           return 0;
         }
         return prev - 1;
@@ -89,7 +90,7 @@ const Welcome = () => {
               <div className="flex items-center justify-center space-x-2 text-blue-600">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span className="text-sm">
-                  Redirecionando para o painel em {countdown}s...
+                  Preparando sistema em {countdown}s...
                 </span>
               </div>
             </div>
