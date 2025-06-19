@@ -22,14 +22,14 @@ const LoadingScreen = () => {
   useEffect(() => {
     console.log('LoadingScreen mounted, starting loading process...');
     
-    // Controlar progresso da barra - mais lento para garantir tempo mínimo
+    // Controlar progresso da barra - garantir 8 segundos
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(progressInterval);
           return 100;
         }
-        return prev + 1.25; // Mais lento para dar 8 segundos
+        return prev + 1.25; // 100 / 80 = 1.25 por tick de 100ms = 8 segundos
       });
     }, 100);
 
@@ -43,9 +43,10 @@ const LoadingScreen = () => {
       console.log('Loading complete, showing completion message...');
       setShowComplete(true);
       setTimeout(() => {
-        console.log('Redirecting to dashboard...');
-        // Navegar direto para a home, que agora vai mostrar o dashboard
-        navigate('/');
+        console.log('Redirecting to dashboard via Index...');
+        // Navegar para a home, que agora vai mostrar o dashboard automaticamente
+        // já que o usuário está logado e não tem mais a flag justLoggedIn
+        navigate('/', { replace: true });
       }, 2000);
     }, 8000);
 

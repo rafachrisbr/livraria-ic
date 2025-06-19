@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Login from './Login';
@@ -7,27 +8,11 @@ import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const { user, loading, isAdmin } = useAuth();
-  const [showContent, setShowContent] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     console.log('Index component - User:', user?.email || 'undefined', 'Admin:', isAdmin, 'Loading:', loading);
     
-    // Timeout de segurança reduzido para 2 segundos
-    const timeout = setTimeout(() => {
-      console.log('Safety timeout - showing content');
-      setShowContent(true);
-    }, 2000);
-
-    if (!loading) {
-      setShowContent(true);
-      clearTimeout(timeout);
-    }
-
-    return () => clearTimeout(timeout);
-  }, [user, isAdmin, loading]);
-
-  useEffect(() => {
     // Verificar se o usuário acabou de fazer login
     const justLoggedIn = sessionStorage.getItem('justLoggedIn');
     
@@ -40,42 +25,41 @@ const Index = () => {
     }
   }, [user, isAdmin, loading, navigate]);
 
-  // Show loading while auth is initializing
-  if (loading && !showContent) {
+  // Se ainda está carregando a autenticação inicial, mostrar um loading mínimo
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">Carregando sistema...</p>
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
+          <p className="text-sm text-gray-600">Verificando autenticação...</p>
         </div>
       </div>
     );
   }
 
-  // If user is logged in and is an admin (and didn't just log in), show dashboard
+  // Se usuário está logado e é admin (e NÃO acabou de fazer login), mostrar dashboard
   if (user && isAdmin) {
     console.log('Showing dashboard for existing admin user');
     return <Dashboard />;
   }
 
-  // If user is logged in but not admin, silently redirect to logout
-  if (user && !isAdmin && !loading) {
+  // Se usuário está logado mas não é admin, fazer logout silencioso
+  if (user && !isAdmin) {
     console.log('User is not admin, performing silent logout...');
-    // Fazer logout silencioso
     setTimeout(() => {
       window.location.href = '/';
     }, 100);
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">Redirecionando...</p>
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
+          <p className="text-sm text-gray-600">Redirecionando...</p>
         </div>
       </div>
     );
   }
 
-  // Otherwise show login
+  // Caso contrário, mostrar tela de login
   console.log('Showing login page');
   return <Login />;
 };
