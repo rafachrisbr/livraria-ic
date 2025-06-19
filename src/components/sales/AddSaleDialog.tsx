@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,8 +21,27 @@ const saleSchema = z.object({
   product_id: z.string().min(1, 'Selecione um produto'),
   quantity: z.number().min(1, 'Quantidade deve ser maior que 0'),
   payment_method: z.enum(['dinheiro', 'cartao_debito', 'cartao_credito', 'pix', 'outros']),
+  credit_type: z.enum(['vista', 'parcelado']).optional(),
+  installments: z.number().min(1).max(4).optional(),
+  installment_fee: z.number().min(0).max(100).optional(),
   sale_date: z.string().min(1, 'Data é obrigatória'),
   notes: z.string().optional()
+}).refine((data) => {
+  if (data.payment_method === 'cartao_credito') {
+    return data.credit_type !== undefined;
+  }
+  return true;
+}, {
+  message: 'Tipo de crédito é obrigatório para cartão de crédito',
+  path: ['credit_type']
+}).refine((data) => {
+  if (data.payment_method === 'cartao_credito' && data.credit_type === 'parcelado') {
+    return data.installments !== undefined && data.installments >= 1 && data.installments <= 4;
+  }
+  return true;
+}, {
+  message: 'Número de parcelas deve ser entre 1 e 4',
+  path: ['installments']
 });
 
 interface Product {
@@ -52,10 +72,18 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
       product_id: '',
       quantity: 1,
       payment_method: 'dinheiro',
+      credit_type: 'vista',
+      installments: 1,
+      installment_fee: 0,
       sale_date: new Date().toISOString().split('T')[0],
       notes: ''
     }
   });
+
+  const watchPaymentMethod = form.watch('payment_method');
+  const watchCreditType = form.watch('credit_type');
+  const watchInstallments = form.watch('installments');
+  const watchInstallmentFee = form.watch('installment_fee');
 
   useEffect(() => {
     if (open) {
@@ -69,6 +97,15 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
       calculatePromotionalPrice();
     }
   }, [selectedProduct, form.watch('quantity')]);
+
+  // Resetar campos de crédito quando método de pagamento muda
+  useEffect(() => {
+    if (watchPaymentMethod !== 'cartao_credito') {
+      form.setValue('credit_type', 'vista');
+      form.setValue('installments', 1);
+      form.setValue('installment_fee', 0);
+    }
+  }, [watchPaymentMethod, form]);
 
   const fetchProducts = async () => {
     try {
@@ -109,6 +146,16 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
     } finally {
       setIsCalculatingPrice(false);
     }
+  };
+
+  const calculateInstallmentValue = () => {
+    if (!promotionalPrice || !watchInstallments) return 0;
+    
+    const totalPrice = promotionalPrice.promotionalPrice * form.watch('quantity');
+    const feeAmount = totalPrice * ((watchInstallmentFee || 0) / 100);
+    const totalWithFee = totalPrice + feeAmount;
+    
+    return totalWithFee / watchInstallments;
   };
 
   const onSubmit = async (values: z.infer<typeof saleSchema>) => {
@@ -163,6 +210,14 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
       const unitPrice = promotionalPrice.promotionalPrice;
       const totalPrice = unitPrice * values.quantity;
 
+      // Calcular valores de parcelamento se necessário
+      let installmentValue = null;
+      if (values.payment_method === 'cartao_credito' && values.credit_type === 'parcelado') {
+        const feeAmount = totalPrice * ((values.installment_fee || 0) / 100);
+        const totalWithFee = totalPrice + feeAmount;
+        installmentValue = totalWithFee / (values.installments || 1);
+      }
+
       // Criar a venda
       const saleData = {
         product_id: values.product_id,
@@ -171,6 +226,10 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
         unit_price: unitPrice,
         total_price: totalPrice,
         payment_method: values.payment_method,
+        credit_type: values.payment_method === 'cartao_credito' ? values.credit_type : null,
+        installments: values.payment_method === 'cartao_credito' && values.credit_type === 'parcelado' ? values.installments : null,
+        installment_fee: values.payment_method === 'cartao_credito' && values.credit_type === 'parcelado' ? values.installment_fee : null,
+        installment_value: installmentValue,
         sale_date: values.sale_date,
         notes: values.notes || null,
         promotion_id: promotionalPrice.hasPromotion ? promotionalPrice.promotion?.id : null
@@ -217,12 +276,16 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
 
       console.log('Estoque atualizado com sucesso:', updateData);
 
-      // Mostrar mensagem de sucesso com informações da promoção
+      // Mostrar mensagem de sucesso com informações da promoção e parcelamento
       let successMessage = `Venda registrada! Estoque atualizado: ${newStockQuantity} unidades restantes.`;
       
       if (promotionalPrice.hasPromotion) {
         const totalSavings = (selectedProduct.price - unitPrice) * values.quantity;
         successMessage += ` Desconto aplicado: R$ ${totalSavings.toFixed(2)}`;
+      }
+
+      if (values.payment_method === 'cartao_credito' && values.credit_type === 'parcelado') {
+        successMessage += ` Parcelado em ${values.installments}x de R$ ${installmentValue?.toFixed(2)}`;
       }
 
       toast({
@@ -262,7 +325,7 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
           Nova Venda
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Nova Venda</DialogTitle>
           <DialogDescription>
@@ -385,6 +448,110 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
                 </FormItem>
               )}
             />
+
+            {/* Campos específicos para cartão de crédito */}
+            {watchPaymentMethod === 'cartao_credito' && (
+              <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-900">Detalhes do Cartão de Crédito</h4>
+                
+                <FormField
+                  control={form.control}
+                  name="credit_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo de Crédito</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-row space-x-6"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="vista" id="vista" />
+                            <Label htmlFor="vista">À Vista</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="parcelado" id="parcelado" />
+                            <Label htmlFor="parcelado">Parcelado</Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {watchCreditType === 'parcelado' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="installments"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Número de Parcelas</FormLabel>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="1">1x</SelectItem>
+                                <SelectItem value="2">2x</SelectItem>
+                                <SelectItem value="3">3x</SelectItem>
+                                <SelectItem value="4">4x</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="installment_fee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Taxa (%)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                placeholder="0.00"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Preview do parcelamento */}
+                    {promotionalPrice && watchInstallments && (
+                      <div className="p-3 bg-blue-100 rounded border border-blue-300">
+                        <p className="text-sm font-medium text-blue-900">
+                          Resumo do Parcelamento:
+                        </p>
+                        <p className="text-sm text-blue-800">
+                          {watchInstallments}x de R$ {calculateInstallmentValue().toFixed(2)}
+                          {watchInstallmentFee && watchInstallmentFee > 0 && (
+                            <span className="text-blue-600"> (taxa {watchInstallmentFee}%)</span>
+                          )}
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          Total: R$ {(calculateInstallmentValue() * (watchInstallments || 1)).toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             <FormField
               control={form.control}

@@ -222,7 +222,11 @@ export type Database = {
         Row: {
           administrator_id: string
           created_at: string
+          credit_type: string | null
           id: string
+          installment_fee: number | null
+          installment_value: number | null
+          installments: number | null
           notes: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
@@ -238,7 +242,11 @@ export type Database = {
         Insert: {
           administrator_id: string
           created_at?: string
+          credit_type?: string | null
           id?: string
+          installment_fee?: number | null
+          installment_value?: number | null
+          installments?: number | null
           notes?: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           product_id: string
@@ -254,7 +262,11 @@ export type Database = {
         Update: {
           administrator_id?: string
           created_at?: string
+          credit_type?: string | null
           id?: string
+          installment_fee?: number | null
+          installment_value?: number | null
+          installments?: number | null
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           product_id?: string
