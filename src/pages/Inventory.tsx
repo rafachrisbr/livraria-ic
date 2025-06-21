@@ -1,49 +1,76 @@
+
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { ArrowLeft, Search, Package, AlertTriangle } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { Search, Package, TrendingUp, TrendingDown, AlertTriangle, Plus } from 'lucide-react';
+import { useSupabase } from '@/hooks/useSupabase';
+import { useAuth } from '@/hooks/useAuth';
+import { ReplenishStockDialog } from '@/components/inventory/ReplenishStockDialog';
 
 interface Product {
   id: string;
   name: string;
+  price: number;
   stock_quantity: number;
   minimum_stock: number;
-  price: number;
   product_code: string;
   categories: {
     name: string;
   };
 }
 
-const Inventory = () => {
-  const { user, signOut } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'low' | 'out'>('all');
-  const { toast } = useToast();
-
-  const handleLogout = async () => {
-    await signOut();
+interface StockMovement {
+  id: string;
+  product_id: string;
+  movement_type: string;
+  quantity: number;
+  previous_stock: number;
+  new_stock: number;
+  reason: string | null;
+  created_at: string;
+  products: {
+    name: string;
   };
+  administrators: {
+    name: string;
+    email: string;
+  };
+}
+
+interface InventoryStats {
+  totalItems: number;
+  totalValue: number;
+  lowStock: number;
+  outOfStock: number;
+}
+
+const Inventory = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [movements, setMovements] = useState<StockMovement[]>([]);
+  const [stats, setStats] = useState<InventoryStats>({
+    totalItems: 0,
+    totalValue: 0,
+    lowStock: 0,
+    outOfStock: 0,
+  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [replenishDialogOpen, setReplenishDialogOpen] = useState(false);
+  
+  const supabase = useSupabase();
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchProducts();
+    fetchInventoryData();
+    fetchMovements();
   }, []);
 
-  useEffect(() => {
-    filterProducts();
-  }, [products, searchTerm, filterType]);
-
-  const fetchProducts = async () => {
+  const fetchInventoryData = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -51,9 +78,9 @@ const Inventory = () => {
         .select(`
           id,
           name,
+          price,
           stock_quantity,
           minimum_stock,
-          price,
           product_code,
           categories:category_id (
             name
@@ -63,262 +90,293 @@ const Inventory = () => {
 
       if (error) {
         console.error('Error fetching products:', error);
-        toast({
-          title: 'Erro',
-          description: 'Erro ao carregar produtos.',
-          variant: 'destructive',
-        });
         return;
       }
 
-      setProducts(data || []);
+      const productsData = data || [];
+      setProducts(productsData);
+
+      // Calcular estatísticas
+      const totalItems = productsData.length;
+      const totalValue = productsData.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0);
+      const lowStock = productsData.filter(p => p.stock_quantity > 0 && p.stock_quantity <= p.minimum_stock).length;
+      const outOfStock = productsData.filter(p => p.stock_quantity === 0).length;
+
+      setStats({ totalItems, totalValue, lowStock, outOfStock });
     } catch (error) {
-      console.error('Error fetching products:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro inesperado ao carregar produtos.',
-        variant: 'destructive',
-      });
+      console.error('Error fetching inventory:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const filterProducts = () => {
-    let filtered = products;
+  const fetchMovements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('stock_movements')
+        .select(`
+          id,
+          product_id,
+          movement_type,
+          quantity,
+          previous_stock,
+          new_stock,
+          reason,
+          created_at,
+          products:product_id (name),
+          administrators:user_id (name, email)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-    // Filtrar por termo de busca
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.categories?.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      if (error) {
+        console.error('Error fetching movements:', error);
+        return;
+      }
+
+      setMovements(data || []);
+    } catch (error) {
+      console.error('Error fetching movements:', error);
     }
-
-    // Filtrar por tipo
-    switch (filterType) {
-      case 'low':
-        filtered = filtered.filter(product => 
-          product.stock_quantity > 0 && product.stock_quantity <= product.minimum_stock
-        );
-        break;
-      case 'out':
-        filtered = filtered.filter(product => product.stock_quantity === 0);
-        break;
-      default:
-        break;
-    }
-
-    setFilteredProducts(filtered);
   };
 
-  const getStockBadge = (current: number, minimum: number) => {
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.product_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getStockStatus = (current: number, minimum: number) => {
     if (current === 0) {
-      return <Badge variant="destructive">Sem Estoque</Badge>;
+      return { label: 'Fora de Estoque', variant: 'destructive' as const, color: 'text-red-600' };
     } else if (current <= minimum) {
-      return <Badge variant="destructive">Estoque Baixo</Badge>;
-    } else if (current <= minimum * 2) {
-      return <Badge variant="secondary">Atenção</Badge>;
+      return { label: 'Estoque Baixo', variant: 'secondary' as const, color: 'text-orange-600' };
     } else {
-      return <Badge variant="default">Normal</Badge>;
+      return { label: 'Em Estoque', variant: 'default' as const, color: 'text-green-600' };
     }
   };
 
-  const lowStockCount = products.filter(p => p.stock_quantity > 0 && p.stock_quantity <= p.minimum_stock).length;
-  const outOfStockCount = products.filter(p => p.stock_quantity === 0).length;
+  const formatMovementType = (type: string) => {
+    return type === 'entry' ? 'Entrada' : 'Saída';
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handleReplenish = (product: Product) => {
+    setSelectedProduct(product);
+    setReplenishDialogOpen(true);
+  };
+
+  const handleReplenishSuccess = () => {
+    fetchInventoryData();
+    fetchMovements();
+    setReplenishDialogOpen(false);
+    setSelectedProduct(null);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link to="/">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar ao Dashboard
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Controle de Estoque</h1>
-                <p className="text-gray-600">Livraria Imaculada Conceição</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">{user?.email}</span>
-              <Button onClick={handleLogout} variant="outline" size="sm">
-                Logout
-              </Button>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Controle de Estoque</h1>
+          <p className="text-muted-foreground">
+            Gerencie o inventário e acompanhe as movimentações
+          </p>
+        </div>
+      </div>
+
+      <Tabs defaultValue="inventory" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="inventory">Inventário</TabsTrigger>
+          <TabsTrigger value="movements">Movimentações</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="inventory" className="space-y-4">
+          {/* Barra de Busca */}
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou código do produto..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
             </div>
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Estatísticas rápidas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700 flex items-center">
-                <Package className="h-4 w-4 mr-2" />
-                Total de Produtos
-              </CardTitle>
+          {/* Cards de Estatísticas */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total de Itens</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalItems}</div>
+                <p className="text-xs text-muted-foreground">produtos cadastrados</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Valor Total em Estoque</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                <p className="text-xs text-muted-foreground">valor total investido</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Estoque Baixo</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">{stats.lowStock}</div>
+                <p className="text-xs text-muted-foreground">produtos em alerta</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Fora de Estoque</CardTitle>
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{stats.outOfStock}</div>
+                <p className="text-xs text-muted-foreground">produtos esgotados</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tabela de Produtos */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista de Produtos</CardTitle>
+              <CardDescription>
+                Visualize e gerencie o estoque de todos os produtos
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-900">{products.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-orange-700 flex items-center">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Estoque Baixo
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-900">{lowStockCount}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-red-700 flex items-center">
-                <Package className="h-4 w-4 mr-2" />
-                Sem Estoque
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-900">{outOfStockCount}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filtros e busca */}
-        <Card className="bg-white border-slate-200 shadow-sm mb-6">
-          <CardHeader>
-            <CardTitle>Filtros</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Buscar por nome, código ou categoria..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={filterType === 'all' ? 'default' : 'outline'}
-                  onClick={() => setFilterType('all')}
-                  size="sm"
-                >
-                  Todos
-                </Button>
-                <Button
-                  variant={filterType === 'low' ? 'default' : 'outline'}
-                  onClick={() => setFilterType('low')}
-                  size="sm"
-                >
-                  Estoque Baixo
-                </Button>
-                <Button
-                  variant={filterType === 'out' ? 'default' : 'outline'}
-                  onClick={() => setFilterType('out')}
-                  size="sm"
-                >
-                  Sem Estoque
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tabela de produtos */}
-        <Card className="bg-white border-slate-200 shadow-sm">
-          <CardHeader>
-            <div className="flex items-center space-x-3">
-              <div className="p-3 bg-slate-100 rounded-xl">
-                <Package className="h-6 w-6 text-slate-600" />
-              </div>
-              <div>
-                <CardTitle className="text-slate-800">Estoque de Produtos</CardTitle>
-                <CardDescription>
-                  Monitore os níveis de estoque em tempo real
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">Carregando produtos...</div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                  <Package className="h-8 w-8 text-slate-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Nenhum produto encontrado
-                </h3>
-                <p className="text-gray-500">
-                  Tente ajustar os filtros ou adicionar novos produtos
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
+              {loading ? (
+                <div className="text-center py-8">Carregando produtos...</div>
+              ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Código</TableHead>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Categoria</TableHead>
+                      <TableHead>Livro</TableHead>
+                      <TableHead>Preço</TableHead>
                       <TableHead>Estoque Atual</TableHead>
-                      <TableHead>Estoque Mínimo</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Valor Total</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell>
-                          <span className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
-                            {product.product_code}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{product.name}</div>
-                        </TableCell>
-                        <TableCell>{product.categories?.name}</TableCell>
-                        <TableCell>
-                          <span className={`font-medium ${
-                            product.stock_quantity === 0 ? 'text-red-600' :
-                            product.stock_quantity <= product.minimum_stock ? 'text-orange-600' :
-                            'text-green-600'
-                          }`}>
-                            {product.stock_quantity} unidades
-                          </span>
-                        </TableCell>
-                        <TableCell>{product.minimum_stock} unidades</TableCell>
-                        <TableCell>
-                          {getStockBadge(product.stock_quantity, product.minimum_stock)}
-                        </TableCell>
-                        <TableCell>
-                          R$ {(product.price * product.stock_quantity).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredProducts.map((product) => {
+                      const status = getStockStatus(product.stock_quantity, product.minimum_stock);
+                      const totalValue = product.price * product.stock_quantity;
+                      
+                      return (
+                        <TableRow key={product.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{product.name}</div>
+                              <div className="text-sm text-gray-500">
+                                {product.product_code} • {product.categories?.name}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>R$ {product.price.toFixed(2)}</TableCell>
+                          <TableCell>{product.stock_quantity} un.</TableCell>
+                          <TableCell>
+                            <Badge variant={status.variant}>{status.label}</Badge>
+                          </TableCell>
+                          <TableCell>R$ {totalValue.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleReplenish(product)}
+                              className="flex items-center space-x-1"
+                            >
+                              <Plus className="h-3 w-3" />
+                              <span>Repor Estoque</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </main>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="movements" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico de Movimentações</CardTitle>
+              <CardDescription>
+                Todas as entradas e saídas de estoque registradas no sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Livro</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Quantidade</TableHead>
+                    <TableHead>Estoque Anterior</TableHead>
+                    <TableHead>Novo Estoque</TableHead>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead>Usuário</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {movements.map((movement) => (
+                    <TableRow key={movement.id}>
+                      <TableCell>{formatDate(movement.created_at)}</TableCell>
+                      <TableCell>{movement.products?.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={movement.movement_type === 'entry' ? 'default' : 'secondary'}>
+                          {formatMovementType(movement.movement_type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{movement.quantity}</TableCell>
+                      <TableCell>{movement.previous_stock}</TableCell>
+                      <TableCell>{movement.new_stock}</TableCell>
+                      <TableCell>{movement.reason || '-'}</TableCell>
+                      <TableCell>{movement.administrators?.name || movement.administrators?.email}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog de Reposição */}
+      <ReplenishStockDialog
+        product={selectedProduct}
+        open={replenishDialogOpen}
+        onClose={() => setReplenishDialogOpen(false)}
+        onSuccess={handleReplenishSuccess}
+      />
     </div>
   );
 };

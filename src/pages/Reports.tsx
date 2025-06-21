@@ -1,487 +1,332 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, DollarSign, Calendar, AlertTriangle, ShoppingCart, Download, Percent } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { ProductSalesChart } from '@/components/reports/ProductSalesChart';
+import { Calendar, TrendingUp, DollarSign, Users, Package } from 'lucide-react';
 import { PaymentMethodChart } from '@/components/reports/PaymentMethodChart';
-import { useExcelExport } from '@/hooks/useExcelExport';
-import { useToast } from '@/hooks/use-toast';
-import { CurrentDateTime } from '@/components/ui/CurrentDateTime';
+import { ProductSalesChart } from '@/components/reports/ProductSalesChart';
+import { supabase } from '@/integrations/supabase/client';
 
-interface ReportData {
+interface SalesData {
   totalSales: number;
   totalRevenue: number;
   averageTicket: number;
-  stockValue: number;
-  lowStockCount: number;
-  totalProducts: number;
-}
-
-interface PromotionReport {
-  sale_id: string;
-  product_name: string;
-  promotion_name: string;
-  discount_type: string;
-  discount_value: number;
-  unit_price: number;
-  promotion_price: number;
-  sale_date: string;
-  quantity: number;
-  total_saved: number;
+  topProducts: Array<{ name: string; quantity: number; revenue: number }>;
+  paymentMethods: Array<{ method: string; count: number; percentage: number }>;
 }
 
 const Reports = () => {
-  const { user, signOut } = useAuth();
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const [reportData, setReportData] = useState<ReportData>({
+  const [salesData, setSalesData] = useState<SalesData>({
     totalSales: 0,
     totalRevenue: 0,
     averageTicket: 0,
-    stockValue: 0,
-    lowStockCount: 0,
-    totalProducts: 0
+    topProducts: [],
+    paymentMethods: [],
   });
-  const [promotionSales, setPromotionSales] = useState<PromotionReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
-  const { exportReportsToExcel } = useExcelExport();
-  const { toast } = useToast();
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+
+  // Data de início fixada em 01/06/2025
+  const FILTER_START_DATE = '2025-06-01';
 
   useEffect(() => {
-    fetchReportData();
-    fetchPromotionSales();
+    fetchSalesData();
   }, [selectedMonth]);
 
-  const fetchReportData = async () => {
+  const fetchSalesData = async () => {
     try {
       setLoading(true);
-
-      // Buscar dados dos produtos
-      const { data: products, error: productsError } = await supabase
-        .from('products')
-        .select('price, stock_quantity, minimum_stock');
-
-      if (productsError) throw productsError;
-
-      // Buscar dados das vendas filtradas por mês
-      const startDate = `${selectedMonth}-01`;
-      const endDate = new Date(new Date(selectedMonth).getFullYear(), new Date(selectedMonth).getMonth() + 1, 0).toISOString().split('T')[0];
       
-      const { data: sales, error: salesError } = await supabase
+      let startDate = FILTER_START_DATE;
+      let endDate = new Date().toISOString().split('T')[0];
+      
+      // Aplicar filtro de mês se selecionado
+      if (selectedMonth !== 'all') {
+        const year = new Date().getFullYear();
+        const month = selectedMonth.padStart(2, '0');
+        startDate = `${year}-${month}-01`;
+        
+        // Calcular último dia do mês
+        const lastDay = new Date(year, parseInt(month), 0).getDate();
+        endDate = `${year}-${month}-${lastDay}`;
+        
+        // Garantir que não seja anterior à data de início fixa
+        if (startDate < FILTER_START_DATE) {
+          startDate = FILTER_START_DATE;
+        }
+      }
+
+      console.log('Fetching sales data from:', startDate, 'to:', endDate);
+
+      // Buscar vendas no período
+      const { data: salesResponse, error: salesError } = await supabase
         .from('sales')
-        .select('total_price')
+        .select(`
+          *,
+          products:product_id (name),
+          administrators:administrator_id (name, email)
+        `)
         .gte('sale_date', startDate)
-        .lte('sale_date', endDate);
+        .lte('sale_date', endDate)
+        .order('sale_date', { ascending: false });
 
-      if (salesError) throw salesError;
+      if (salesError) {
+        console.error('Error fetching sales:', salesError);
+        return;
+      }
 
-      // Calcular métricas dos produtos
-      const totalProducts = products?.length || 0;
-      const stockValue = products?.reduce((sum, p) => sum + (p.price * p.stock_quantity), 0) || 0;
-      const lowStockCount = products?.filter(p => p.stock_quantity <= p.minimum_stock).length || 0;
+      const sales = salesResponse || [];
+      console.log('Sales found:', sales.length);
 
-      // Calcular métricas das vendas
-      const totalSales = sales?.length || 0;
-      const totalRevenue = sales?.reduce((sum, s) => sum + s.total_price, 0) || 0;
+      // Calcular estatísticas
+      const totalSales = sales.length;
+      const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total_price || 0), 0);
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-      setReportData({
+      // Top produtos
+      const productSales = sales.reduce((acc: Record<string, { quantity: number; revenue: number }>, sale) => {
+        const productName = sale.products?.name || 'Produto Desconhecido';
+        if (!acc[productName]) {
+          acc[productName] = { quantity: 0, revenue: 0 };
+        }
+        acc[productName].quantity += sale.quantity || 0;
+        acc[productName].revenue += sale.total_price || 0;
+        return acc;
+      }, {});
+
+      const topProducts = Object.entries(productSales)
+        .map(([name, data]) => ({ name, ...data }))
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+
+      // Métodos de pagamento
+      const paymentMethodCounts = sales.reduce((acc: Record<string, number>, sale) => {
+        const method = sale.payment_method || 'outros';
+        acc[method] = (acc[method] || 0) + 1;
+        return acc;
+      }, {});
+
+      const paymentMethods = Object.entries(paymentMethodCounts).map(([method, count]) => ({
+        method: method.replace('_', ' ').toUpperCase(),
+        count,
+        percentage: totalSales > 0 ? (count / totalSales) * 100 : 0,
+      }));
+
+      setSalesData({
         totalSales,
         totalRevenue,
         averageTicket,
-        stockValue,
-        lowStockCount,
-        totalProducts
+        topProducts,
+        paymentMethods,
       });
     } catch (error) {
-      console.error('Error fetching report data:', error);
+      console.error('Error fetching sales data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchPromotionSales = async () => {
-    try {
-      // Filtros de data baseados no mês selecionado
-      const startDate = `${selectedMonth}-01`;
-      const endDate = new Date(new Date(selectedMonth).getFullYear(), new Date(selectedMonth).getMonth() + 1, 0).toISOString().split('T')[0];
+  const formatDateRange = () => {
+    const startDate = new Date(FILTER_START_DATE);
+    const endDate = new Date();
+    
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('pt-BR', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric' 
+      });
+    };
+
+    if (selectedMonth !== 'all') {
+      const year = new Date().getFullYear();
+      const month = selectedMonth.padStart(2, '0');
+      const monthStart = new Date(year, parseInt(month) - 1, 1);
+      const monthEnd = new Date(year, parseInt(month), 0);
       
-      const { data, error } = await supabase
-        .from("sales")
-        .select(
-          `
-            id, quantity, unit_price, total_price, sale_date, promotion_id,
-            promotion_name, promotion_discount_type, promotion_discount_value,
-            product:products(id, name),
-            promotion:promotions(id, name, discount_type, discount_value)
-          `
-        )
-        .or('promotion_id.not.is.null,promotion_name.not.is.null')
-        .gte('sale_date', startDate)
-        .lte('sale_date', endDate)
-        .order("sale_date", { ascending: false });
-
-      if (error) throw error;
-
-      const mapped: PromotionReport[] = (data || [])
-        .map((sale: any) => {
-          const promotionName = sale.promotion_name || sale.promotion?.name;
-          const discountType = sale.promotion_discount_type || sale.promotion?.discount_type;
-          const discountValue = sale.promotion_discount_value || sale.promotion?.discount_value;
-
-          if (!promotionName || !discountType || discountValue === null) {
-            return null;
-          }
-
-          let pricePromo = sale.unit_price;
-          if (discountType === "percentage") {
-            pricePromo = sale.unit_price * (1 - (discountValue / 100));
-          } else if (discountType === "fixed_amount") {
-            pricePromo = Math.max(0, sale.unit_price - discountValue);
-          }
-          const total_saved = (sale.unit_price - pricePromo) * sale.quantity;
-
-          return {
-            sale_id: sale.id,
-            product_name: sale.product?.name,
-            promotion_name: promotionName,
-            discount_type: discountType,
-            discount_value: discountValue,
-            unit_price: sale.unit_price,
-            promotion_price: pricePromo,
-            sale_date: sale.sale_date,
-            quantity: sale.quantity,
-            total_saved,
-          };
-        })
-        .filter(Boolean);
-
-      setPromotionSales(mapped);
-    } catch (err: any) {
-      console.error('Erro ao buscar vendas promocionais:', err);
-      toast({ title: "Erro ao buscar vendas promocionais", description: err.message, variant: "destructive" });
+      // Se o mês selecionado é anterior a junho/2025, mostrar a partir de junho
+      if (monthStart < startDate) {
+        return `${formatDate(startDate)} - ${formatDate(monthEnd)}`;
+      }
+      
+      return `${formatDate(monthStart)} - ${formatDate(monthEnd)}`;
     }
+    
+    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
 
-  const handleExport = async () => {
-    try {
-      setExporting(true);
-      await exportReportsToExcel();
-      toast({
-        title: 'Sucesso',
-        description: 'Relatório exportado com sucesso!'
-      });
-    } catch (error) {
-      console.error('Error exporting:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao exportar relatório',
-        variant: 'destructive'
-      });
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await signOut();
-  };
-
-  const generateMonthOptions = () => {
-    const options = [];
-    const currentDate = new Date();
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      const value = date.toISOString().slice(0, 7);
-      const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-      options.push({ value, label });
-    }
-    return options;
-  };
+  const months = [
+    { value: 'all', label: 'Todos os períodos' },
+    { value: '1', label: 'Janeiro' },
+    { value: '2', label: 'Fevereiro' },
+    { value: '3', label: 'Março' },
+    { value: '4', label: 'Abril' },
+    { value: '5', label: 'Maio' },
+    { value: '6', label: 'Junho' },
+    { value: '7', label: 'Julho' },
+    { value: '8', label: 'Agosto' },
+    { value: '9', label: 'Setembro' },
+    { value: '10', label: 'Outubro' },
+    { value: '11', label: 'Novembro' },
+    { value: '12', label: 'Dezembro' },
+  ];
 
   return (
-    <div className="min-h-screen bg-slate-50 relative overflow-hidden">
-      {/* Background brasão FSSPX */}
-      <div className="fixed inset-0 opacity-5 pointer-events-none">
-        <img 
-          src="https://upload.wikimedia.org/wikipedia/commons/6/67/H%C3%A9raldique_meuble_Coeur_vend%C3%A9en.svg" 
-          alt="FSSPX Brasão"
-          className="w-full h-full object-contain object-center"
-        />
-      </div>
-      
-      <header className="bg-white shadow-sm border-b border-slate-200 relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link to="/">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar ao Painel
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Relatórios</h1>
-                <p className="text-slate-600">Livraria Imaculada Conceição</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <CurrentDateTime />
-              <Button 
-                onClick={handleExport} 
-                disabled={exporting}
-                variant="outline"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {exporting ? 'Exportando...' : 'Exportar Excel'}
-              </Button>
-              <span className="text-sm text-slate-600">{user?.email}</span>
-              <Button onClick={handleLogout} variant="outline" size="sm">
-                Logout
-              </Button>
-            </div>
-          </div>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Relatórios</h1>
+          <p className="text-muted-foreground">
+            Análise de vendas e desempenho da livraria
+          </p>
         </div>
-      </header>
+        
+        <div className="flex items-center space-x-4">
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Selecionar período" />
+            </SelectTrigger>
+            <SelectContent>
+              {months.map((month) => (
+                <SelectItem key={month.value} value={month.value}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-        {/* Filtro de Mês */}
-        <div className="mb-6">
-          <Card className="bg-white border-slate-200 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center space-x-2">
-                <Calendar className="h-5 w-5 text-slate-600" />
-                <span>Filtros do Relatório</span>
-              </CardTitle>
+      {/* Cards de Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-700">
+              Total de Vendas
+            </CardTitle>
+            <div className="p-2 bg-blue-200 rounded-lg">
+              <TrendingUp className="h-4 w-4 text-blue-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-900">{salesData.totalSales}</div>
+            <p className="text-xs text-blue-600 mt-1">
+              {formatDateRange()}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-700">
+              Receita Total
+            </CardTitle>
+            <div className="p-2 bg-green-200 rounded-lg">
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-900">
+              R$ {salesData.totalRevenue.toFixed(2)}
+            </div>
+            <p className="text-xs text-green-600 mt-1">
+              Ticket médio: R$ {salesData.averageTicket.toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-purple-700">
+              Ticket Médio
+            </CardTitle>
+            <div className="p-2 bg-purple-200 rounded-lg">
+              <Users className="h-4 w-4 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-purple-900">
+              R$ {salesData.averageTicket.toFixed(2)}
+            </div>
+            <p className="text-xs text-purple-600 mt-1">
+              Baseado em {salesData.totalSales} vendas
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs de Relatórios */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+          <TabsTrigger value="products">Produtos</TabsTrigger>
+          <TabsTrigger value="payments">Pagamentos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Métodos de Pagamento</CardTitle>
+                <CardDescription>
+                  Distribuição dos métodos de pagamento utilizados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PaymentMethodChart data={salesData.paymentMethods} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Top 5 Produtos</CardTitle>
+                <CardDescription>
+                  Produtos mais vendidos no período
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ProductSalesChart data={salesData.topProducts} />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="products" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Análise de Produtos</CardTitle>
+              <CardDescription>
+                Desempenho detalhado de vendas por produto
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-4">
-                <label className="text-sm font-medium text-slate-700">Mês:</label>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {generateMonthOptions().map(({ value, label }) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <ProductSalesChart data={salesData.topProducts} detailed />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="payments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Análise de Pagamentos</CardTitle>
+              <CardDescription>
+                Métodos de pagamento e estatísticas detalhadas
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PaymentMethodChart data={salesData.paymentMethods} detailed />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {loading && (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Carregando dados...</p>
         </div>
-
-        {loading ? (
-          <div className="text-center py-8">Carregando relatórios...</div>
-        ) : (
-          <>
-            {/* Cards de métricas principais */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Card className="bg-white border-slate-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-emerald-100 rounded-lg">
-                      <DollarSign className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-slate-800 text-lg">Vendas Totais</CardTitle>
-                      <CardDescription className="text-sm">
-                        Receita do mês
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-slate-800">
-                    R$ {reportData.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-sm text-slate-500">
-                    {reportData.totalSales} vendas realizadas
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-slate-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <ShoppingCart className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-slate-800 text-lg">Ticket Médio</CardTitle>
-                      <CardDescription className="text-sm">
-                        Valor médio por venda
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-slate-800">
-                    R$ {reportData.averageTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-sm text-slate-500">
-                    {reportData.totalSales > 0 ? 'Baseado em vendas ativas' : 'Sem dados suficientes'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-slate-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Calendar className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-slate-800 text-lg">Valor do Estoque</CardTitle>
-                      <CardDescription className="text-sm">
-                        Valor total em estoque
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-slate-800">
-                    R$ {reportData.stockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </div>
-                  <p className="text-sm text-slate-500">
-                    {reportData.totalProducts} produtos em estoque
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-slate-200 shadow-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-orange-100 rounded-lg">
-                      <AlertTriangle className="h-5 w-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-slate-800 text-lg">Estoque Baixo</CardTitle>
-                      <CardDescription className="text-sm">
-                        Produtos com estoque mínimo
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {reportData.lowStockCount}
-                  </div>
-                  <p className="text-sm text-slate-500">
-                    {reportData.lowStockCount === 0 ? 'Estoque normal' : 'Requer atenção'}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Gráficos */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              <ProductSalesChart />
-              <PaymentMethodChart />
-            </div>
-
-            {/* Resumo Geral */}
-            <Card className="bg-white border-slate-200 shadow-sm">
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <div className="p-3 bg-slate-100 rounded-xl">
-                    <DollarSign className="h-6 w-6 text-slate-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-slate-800">Resumo Geral</CardTitle>
-                    <CardDescription>
-                      Visão geral dos dados do sistema
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center p-4 bg-slate-50 rounded-lg">
-                    <h4 className="font-semibold text-slate-800 mb-2">Total de Produtos</h4>
-                    <p className="text-2xl font-bold text-slate-900">{reportData.totalProducts}</p>
-                  </div>
-                  <div className="text-center p-4 bg-slate-50 rounded-lg">
-                    <h4 className="font-semibold text-slate-800 mb-2">Vendas Realizadas</h4>
-                    <p className="text-2xl font-bold text-green-600">{reportData.totalSales}</p>
-                  </div>
-                  <div className="text-center p-4 bg-slate-50 rounded-lg">
-                    <h4 className="font-semibold text-slate-800 mb-2">Produtos em Estoque</h4>
-                    <p className="text-2xl font-bold text-blue-600">{reportData.totalProducts}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Relatório de Vendas Promocionais */}
-            <Card className="bg-white border-slate-200 shadow-sm mt-8">
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <div className="p-3 bg-green-100 rounded-xl">
-                    <Percent className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-slate-800">Relatório de Vendas Promocionais</CardTitle>
-                    <CardDescription>
-                      Histórico completo de vendas realizadas com descontos promocionais.
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {promotionSales.length === 0 ? (
-                  <div className="text-center py-6 text-slate-500">
-                    Nenhuma venda promocional registrada até agora.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border text-xs lg:text-sm">
-                      <thead>
-                        <tr className="bg-slate-100 text-slate-700">
-                          <th className="px-2 py-2 text-left">Data</th>
-                          <th className="px-2 py-2 text-left">Produto</th>
-                          <th className="px-2 py-2 text-left">Promoção</th>
-                          <th className="px-2 py-2 text-left">Preço Original</th>
-                          <th className="px-2 py-2 text-left">Preço Promo</th>
-                          <th className="px-2 py-2 text-left">Qtd</th>
-                          <th className="px-2 py-2 text-left">Total Desconto</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {promotionSales.map((item) => (
-                          <tr key={item.sale_id} className="border-b">
-                            <td className="px-2 py-2">{new Date(item.sale_date).toLocaleDateString('pt-BR')}</td>
-                            <td className="px-2 py-2">{item.product_name}</td>
-                            <td className="px-2 py-2">{item.promotion_name}</td>
-                            <td className="px-2 py-2">R$ {item.unit_price.toFixed(2)}</td>
-                            <td className="px-2 py-2">R$ {item.promotion_price.toFixed(2)}</td>
-                            <td className="px-2 py-2">{item.quantity}</td>
-                            <td className="px-2 py-2 text-green-700 font-medium">
-                              R$ {item.total_saved.toFixed(2)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="mt-3 text-right text-sm">
-                      <b>Total desconto concedido:</b>{" "}
-                      R$ {promotionSales.reduce((acc, p) => acc + p.total_saved, 0).toFixed(2)}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </main>
+      )}
     </div>
   );
 };
