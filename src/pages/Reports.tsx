@@ -266,29 +266,8 @@ const Reports = () => {
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Métodos de Pagamento</CardTitle>
-                <CardDescription>
-                  Distribuição dos métodos de pagamento utilizados
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PaymentMethodChart data={salesData.paymentMethods} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Top 5 Produtos</CardTitle>
-                <CardDescription>
-                  Produtos mais vendidos no período
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ProductSalesChart data={salesData.topProducts} />
-              </CardContent>
-            </Card>
+            <PaymentMethodChart />
+            <ProductSalesChart />
           </div>
         </TabsContent>
 
@@ -301,7 +280,7 @@ const Reports = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProductSalesChart data={salesData.topProducts} detailed />
+              <ProductSalesChart />
             </CardContent>
           </Card>
         </TabsContent>
@@ -315,7 +294,7 @@ const Reports = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <PaymentMethodChart data={salesData.paymentMethods} detailed />
+              <PaymentMethodChart />
             </CardContent>
           </Card>
         </TabsContent>

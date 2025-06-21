@@ -34,11 +34,11 @@ interface StockMovement {
   created_at: string;
   products: {
     name: string;
-  };
+  } | null;
   administrators: {
     name: string;
     email: string;
-  };
+  } | null;
 }
 
 interface InventoryStats {
@@ -124,7 +124,7 @@ const Inventory = () => {
           reason,
           created_at,
           products:product_id (name),
-          administrators:user_id (name, email)
+          user_id
         `)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -134,7 +134,20 @@ const Inventory = () => {
         return;
       }
 
-      setMovements(data || []);
+      // Buscar informações dos administradores separadamente
+      const userIds = [...new Set(data?.map(m => m.user_id) || [])];
+      const { data: adminsData } = await supabase
+        .from('administrators')
+        .select('user_id, name, email')
+        .in('user_id', userIds);
+
+      // Mapear movimentações com dados dos administradores
+      const movementsWithAdmins = data?.map(movement => ({
+        ...movement,
+        administrators: adminsData?.find(admin => admin.user_id === movement.user_id) || null
+      })) || [];
+
+      setMovements(movementsWithAdmins);
     } catch (error) {
       console.error('Error fetching movements:', error);
     }
