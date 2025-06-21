@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -100,10 +99,10 @@ const Reports = () => {
       const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total_price || 0), 0);
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-      // Contar vendas com promoções
-      const salesWithPromotions = sales.filter(sale => sale.has_promotion === true).length;
+      // Contar vendas com promoções (usando promotion_id ao invés de has_promotion)
+      const salesWithPromotions = sales.filter(sale => sale.promotion_id !== null).length;
       const promotionalRevenue = sales
-        .filter(sale => sale.has_promotion === true)
+        .filter(sale => sale.promotion_id !== null)
         .reduce((sum, sale) => sum + (sale.total_price || 0), 0);
 
       // Top produtos
@@ -456,49 +455,66 @@ const Reports = () => {
 
         {loading ? (
           <div className="space-y-6">
-            {/* Elegant Loading Animation */}
-            <div className="flex flex-col items-center justify-center py-12 space-y-6">
+            {/* Elegant Dynamic Loading Animation */}
+            <div className="flex flex-col items-center justify-center py-16 space-y-8">
               <div className="relative">
-                <div className="w-16 h-16 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin"></div>
-                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin animate-pulse" style={{ animationDelay: '0.1s' }}></div>
-                <div className="absolute inset-2 w-12 h-12 border-2 border-transparent border-t-green-500 rounded-full animate-spin" style={{ animationDelay: '0.2s' }}></div>
+                {/* Main spinning ring */}
+                <div className="w-20 h-20 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+                {/* Secondary ring with delay */}
+                <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-t-green-500 rounded-full animate-spin opacity-75" style={{ animationDelay: '0.15s', animationDuration: '1.2s' }}></div>
+                {/* Inner ring */}
+                <div className="absolute inset-3 w-14 h-14 border-2 border-transparent border-t-purple-500 rounded-full animate-spin opacity-60" style={{ animationDelay: '0.3s', animationDuration: '0.8s' }}></div>
+                {/* Center pulse */}
+                <div className="absolute inset-6 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
               </div>
-              <div className="text-center space-y-2">
-                <div className="text-lg font-semibold text-slate-700 animate-fade-in">
+              
+              <div className="text-center space-y-4">
+                <div className="text-xl font-bold text-slate-700 animate-pulse">
                   Carregando relatórios...
                 </div>
                 <div className="text-sm text-slate-500 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                  Processando dados de vendas
+                  Processando dados de vendas e estatísticas
                 </div>
-                <div className="flex space-x-1 mt-4">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                
+                {/* Dynamic loading indicators */}
+                <div className="flex justify-center space-x-2 mt-6">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-3 h-3 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
+                </div>
+                
+                {/* Progress bar simulation */}
+                <div className="w-64 h-2 bg-slate-200 rounded-full overflow-hidden mt-4">
+                  <div className="h-full bg-gradient-to-r from-blue-500 via-green-500 to-purple-500 rounded-full animate-pulse"></div>
                 </div>
               </div>
             </div>
             
-            {/* Skeleton Loading Cards */}
+            {/* Enhanced Skeleton Loading Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
-                <Card key={i} className="animate-pulse">
-                  <CardHeader className="space-y-2">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-8 w-16" />
+                <Card key={i} className="animate-pulse border border-slate-200">
+                  <CardHeader className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-32 bg-gradient-to-r from-slate-200 to-slate-300" />
+                      <Skeleton className="h-8 w-8 rounded-lg bg-gradient-to-r from-slate-200 to-slate-300" />
+                    </div>
+                    <Skeleton className="h-8 w-20 bg-gradient-to-r from-slate-200 to-slate-300" />
                   </CardHeader>
                   <CardContent>
-                    <Skeleton className="h-3 w-40 mt-2" />
+                    <Skeleton className="h-3 w-40 mt-2 bg-gradient-to-r from-slate-200 to-slate-300" />
                   </CardContent>
                 </Card>
               ))}
             </div>
             
             {/* Skeleton Tabs */}
-            <div className="space-y-4">
-              <Skeleton className="h-10 w-96" />
+            <div className="space-y-6">
+              <Skeleton className="h-10 w-96 bg-gradient-to-r from-slate-200 to-slate-300" />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Skeleton className="h-64 rounded-lg" />
-                <Skeleton className="h-64 rounded-lg" />
+                <Skeleton className="h-80 rounded-lg bg-gradient-to-r from-slate-200 to-slate-300" />
+                <Skeleton className="h-80 rounded-lg bg-gradient-to-r from-slate-200 to-slate-300" />
               </div>
             </div>
           </div>
