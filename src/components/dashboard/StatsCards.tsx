@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -182,7 +181,7 @@ export const StatsCards = () => {
                 R$ {stats.totalValueWithDiscount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-green-600 mt-1">
-                economia de R$ {stats.totalDiscount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                desconto de R$ {stats.totalDiscount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
           ) : (

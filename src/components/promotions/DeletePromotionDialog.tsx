@@ -42,7 +42,7 @@ export const DeletePromotionDialog = ({
 
       console.log('Dados da promoção encontrados:', promotionData);
 
-      // Atualizar vendas relacionadas com dados históricos da promoção (mantendo promotion_id)
+      // Atualizar vendas relacionadas com dados históricos da promoção (MANTENDO promotion_id)
       const { error: salesUpdateError } = await supabase
         .from('sales')
         .update({ 
