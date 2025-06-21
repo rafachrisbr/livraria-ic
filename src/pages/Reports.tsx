@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -74,7 +75,7 @@ const Reports = () => {
 
       console.log('Fetching sales data from:', startDate, 'to:', endDate);
 
-      // Buscar vendas no período, incluindo promoções
+      // Buscar vendas no período, incluindo informações de promoções
       const { data: salesResponse, error: salesError } = await supabase
         .from('sales')
         .select(`
@@ -99,11 +100,23 @@ const Reports = () => {
       const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total_price || 0), 0);
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-      // Contar vendas com promoções (usando promotion_id ao invés de has_promotion)
-      const salesWithPromotions = sales.filter(sale => sale.promotion_id !== null).length;
+      // Contar vendas com promoções - verificar múltiplos campos
+      const salesWithPromotions = sales.filter(sale => 
+        sale.promotion_id !== null || 
+        sale.promotion_name !== null || 
+        sale.promotion_discount_value !== null
+      ).length;
+      
       const promotionalRevenue = sales
-        .filter(sale => sale.promotion_id !== null)
+        .filter(sale => 
+          sale.promotion_id !== null || 
+          sale.promotion_name !== null || 
+          sale.promotion_discount_value !== null
+        )
         .reduce((sum, sale) => sum + (sale.total_price || 0), 0);
+
+      console.log('Sales with promotions:', salesWithPromotions);
+      console.log('Promotional revenue:', promotionalRevenue);
 
       // Top produtos
       const productSales = sales.reduce((acc: Record<string, { quantity: number; revenue: number }>, sale) => {

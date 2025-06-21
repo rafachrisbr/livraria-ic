@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,16 +44,17 @@ export const StatsCards = () => {
 
       if (productsError) throw productsError;
 
-      // Buscar promoções ativas
+      // Buscar promoções ativas com produtos associados
+      const now = new Date().toISOString();
       const { data: promotions, error: promotionsError } = await supabase
         .from('promotions')
         .select(`
           *,
-          product_promotions:product_promotions(product_id)
+          product_promotions!inner(product_id)
         `)
         .eq('is_active', true)
-        .lte('start_date', new Date().toISOString())
-        .gte('end_date', new Date().toISOString());
+        .lte('start_date', now)
+        .gte('end_date', now);
 
       if (promotionsError) throw promotionsError;
 
@@ -73,26 +75,42 @@ export const StatsCards = () => {
       let lowStockProducts = 0;
       let outOfStockProducts = 0;
 
+      // Criar mapa de promoções por produto para facilitar busca
+      const promotionsByProduct = new Map();
+      promotions?.forEach(promotion => {
+        promotion.product_promotions?.forEach((pp: any) => {
+          if (!promotionsByProduct.has(pp.product_id)) {
+            promotionsByProduct.set(pp.product_id, []);
+          }
+          promotionsByProduct.get(pp.product_id).push(promotion);
+        });
+      });
+
       products?.forEach(product => {
         const originalValue = product.price * product.stock_quantity;
         totalValue += originalValue;
 
         // Verificar se produto tem promoção ativa
-        const promotion = promotions?.find(p => 
-          p.product_promotions?.some((pp: any) => pp.product_id === product.id)
-        );
-
-        let effectivePrice = product.price;
+        const productPromotions = promotionsByProduct.get(product.id) || [];
         
-        if (promotion) {
+        let bestPrice = product.price;
+        
+        // Encontrar o melhor preço (menor) entre todas as promoções ativas
+        productPromotions.forEach((promotion: any) => {
+          let discountedPrice = product.price;
+          
           if (promotion.discount_type === 'percentage') {
-            effectivePrice = product.price * (1 - promotion.discount_value / 100);
-          } else if (promotion.discount_type === 'fixed') {
-            effectivePrice = Math.max(0, product.price - promotion.discount_value);
+            discountedPrice = product.price * (1 - promotion.discount_value / 100);
+          } else if (promotion.discount_type === 'fixed_amount') {
+            discountedPrice = Math.max(0, product.price - promotion.discount_value);
           }
-        }
+          
+          if (discountedPrice < bestPrice) {
+            bestPrice = discountedPrice;
+          }
+        });
 
-        totalValueWithDiscount += effectivePrice * product.stock_quantity;
+        totalValueWithDiscount += bestPrice * product.stock_quantity;
 
         if (product.stock_quantity === 0) {
           outOfStockProducts++;
