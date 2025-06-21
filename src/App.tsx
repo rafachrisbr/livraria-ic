@@ -15,7 +15,6 @@ import Sales from "./pages/Sales";
 import Products from "./pages/Products";
 import Promotions from "./pages/Promotions";
 import Reports from "./pages/Reports";
-import Inventory from "./pages/Inventory";
 import SuperAdmin from "./pages/SuperAdmin";
 import NotFound from "./pages/NotFound";
 
@@ -45,7 +44,6 @@ const App = () => (
               <Route path="/products" element={<Products />} />
               <Route path="/promotions" element={<Promotions />} />
               <Route path="/reports" element={<Reports />} />
-              <Route path="/inventory" element={<Inventory />} />
               <Route path="/audit" element={<Audit />} />
               <Route path="/super-admin" element={<SuperAdmin />} />
               <Route path="*" element={<NotFound />} />
