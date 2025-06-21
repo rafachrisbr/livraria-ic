@@ -1,15 +1,19 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Calendar, TrendingUp, DollarSign, Users, Package, Download } from 'lucide-react';
+import { Calendar, TrendingUp, DollarSign, Users, Package, Download, ArrowLeft } from 'lucide-react';
 import { PaymentMethodChart } from '@/components/reports/PaymentMethodChart';
 import { ProductSalesChart } from '@/components/reports/ProductSalesChart';
 import { supabase } from '@/integrations/supabase/client';
 import { useExcelExport } from '@/hooks/useExcelExport';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileHeader } from '@/components/mobile/MobileHeader';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Link } from 'react-router-dom';
 
 interface SalesData {
   totalSales: number;
@@ -32,6 +36,8 @@ const Reports = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const { exportReportsToExcel } = useExcelExport();
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const isMobile = useIsMobile();
 
   // Data de início fixada em 01/06/2025
   const FILTER_START_DATE = '2025-06-01';
@@ -149,6 +155,10 @@ const Reports = () => {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+  };
+
   const formatDateRange = () => {
     const startDate = new Date(FILTER_START_DATE);
     const endDate = new Date(`${selectedYear}-12-31`);
@@ -200,17 +210,203 @@ const Reports = () => {
     { value: '12', label: 'Dezembro' },
   ];
 
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <MobileHeader title="Relatórios" subtitle="Análise de vendas e desempenho" />
+        <main className="container mx-auto p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Relatórios</h1>
+              <p className="text-muted-foreground">
+                Análise de vendas e desempenho da livraria
+              </p>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year.value} value={year.value}>
+                      {year.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecionar mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Button onClick={handleExportToExcel} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Exportar Excel
+              </Button>
+            </div>
+          </div>
+
+          {/* Cards de Estatísticas */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-blue-700">
+                  Total de Vendas
+                </CardTitle>
+                <div className="p-2 bg-blue-200 rounded-lg">
+                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-900">{salesData.totalSales}</div>
+                <p className="text-xs text-blue-600 mt-1">
+                  {formatDateRange()}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-green-700">
+                  Receita Total
+                </CardTitle>
+                <div className="p-2 bg-green-200 rounded-lg">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-900">
+                  R$ {salesData.totalRevenue.toFixed(2)}
+                </div>
+                <p className="text-xs text-green-600 mt-1">
+                  Ticket médio: R$ {salesData.averageTicket.toFixed(2)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-purple-700">
+                  Ticket Médio
+                </CardTitle>
+                <div className="p-2 bg-purple-200 rounded-lg">
+                  <Users className="h-4 w-4 text-purple-600" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-purple-900">
+                  R$ {salesData.averageTicket.toFixed(2)}
+                </div>
+                <p className="text-xs text-purple-600 mt-1">
+                  Baseado em {salesData.totalSales} vendas
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tabs de Relatórios */}
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+              <TabsTrigger value="products">Produtos</TabsTrigger>
+              <TabsTrigger value="payments">Pagamentos</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <PaymentMethodChart />
+                <ProductSalesChart />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="products" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Análise de Produtos</CardTitle>
+                  <CardDescription>
+                    Desempenho detalhado de vendas por produto
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ProductSalesChart />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="payments" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Análise de Pagamentos</CardTitle>
+                  <CardDescription>
+                    Métodos de pagamento e estatísticas detalhadas
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PaymentMethodChart />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          {loading && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+              <p className="mt-2 text-gray-600">Carregando dados...</p>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Desktop Header */}
+      <header className="bg-white shadow-sm border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Link to="/" className="flex items-center text-slate-600 hover:text-slate-900 transition-colors">
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                <span className="text-sm font-medium">Voltar ao Dashboard</span>
+              </Link>
+              <div className="h-6 w-px bg-slate-300"></div>
+              <img 
+                src="https://cadastro.fsspx.com.br/wp-content/uploads/2023/04/fsspx-logo-novo-png-large-3.png" 
+                alt="FSSPX Logo"
+                className="h-8 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = "https://static.wixstatic.com/media/ecc2b9_af29ba9d8fb542baae713a67ff8faafa~mv2.png/v1/fill/w_184,h_184,al_c,usm_0.66_1.00_0.01/ecc2b9_af29ba9d8fb542baae713a67ff8faafa~mv2.png";
+                }}
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Relatórios</h1>
+                <p className="text-slate-600">Análise de vendas e desempenho da livraria</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-slate-600 hidden sm:inline">{user?.email}</span>
+              <Button onClick={handleLogout} variant="outline" size="sm">
+                Logout
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
       <main className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Relatórios</h1>
-            <p className="text-muted-foreground">
-              Análise de vendas e desempenho da livraria
-            </p>
-          </div>
-          
           <div className="flex items-center space-x-4">
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-32">
@@ -245,113 +441,153 @@ const Reports = () => {
           </div>
         </div>
 
-        {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-700">
-                Total de Vendas
-              </CardTitle>
-              <div className="p-2 bg-blue-200 rounded-lg">
-                <TrendingUp className="h-4 w-4 text-blue-600" />
+        {loading ? (
+          <div className="space-y-6">
+            {/* Elegant Loading Animation */}
+            <div className="flex flex-col items-center justify-center py-12 space-y-6">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin animate-pulse" style={{ animationDelay: '0.1s' }}></div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-900">{salesData.totalSales}</div>
-              <p className="text-xs text-blue-600 mt-1">
-                {formatDateRange()}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-700">
-                Receita Total
-              </CardTitle>
-              <div className="p-2 bg-green-200 rounded-lg">
-                <DollarSign className="h-4 w-4 text-green-600" />
+              <div className="text-center space-y-2">
+                <div className="text-lg font-semibold text-slate-700 animate-fade-in">
+                  Carregando relatórios...
+                </div>
+                <div className="text-sm text-slate-500 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+                  Processando dados de vendas
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-900">
-                R$ {salesData.totalRevenue.toFixed(2)}
-              </div>
-              <p className="text-xs text-green-600 mt-1">
-                Ticket médio: R$ {salesData.averageTicket.toFixed(2)}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-700">
-                Ticket Médio
-              </CardTitle>
-              <div className="p-2 bg-purple-200 rounded-lg">
-                <Users className="h-4 w-4 text-purple-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-900">
-                R$ {salesData.averageTicket.toFixed(2)}
-              </div>
-              <p className="text-xs text-purple-600 mt-1">
-                Baseado em {salesData.totalSales} vendas
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Tabs de Relatórios */}
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="products">Produtos</TabsTrigger>
-            <TabsTrigger value="payments">Pagamentos</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <PaymentMethodChart />
-              <ProductSalesChart />
             </div>
-          </TabsContent>
-
-          <TabsContent value="products" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Análise de Produtos</CardTitle>
-                <CardDescription>
-                  Desempenho detalhado de vendas por produto
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ProductSalesChart />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="payments" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Análise de Pagamentos</CardTitle>
-                <CardDescription>
-                  Métodos de pagamento e estatísticas detalhadas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PaymentMethodChart />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {loading && (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Carregando dados...</p>
+            
+            {/* Skeleton Loading Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-8 w-16" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-8 w-24" />
+                    <Skeleton className="h-3 w-40 mt-2" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            
+            {/* Skeleton Tabs */}
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-96" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-64 rounded-lg" />
+                <Skeleton className="h-64 rounded-lg" />
+              </div>
+            </div>
           </div>
+        ) : (
+          <>
+            {/* Cards de Estatísticas */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
+              <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-700">
+                    Total de Vendas
+                  </CardTitle>
+                  <div className="p-2 bg-blue-200 rounded-lg">
+                    <TrendingUp className="h-4 w-4 text-blue-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-blue-900">{salesData.totalSales}</div>
+                  <p className="text-xs text-blue-600 mt-1">
+                    {formatDateRange()}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-green-700">
+                    Receita Total
+                  </CardTitle>
+                  <div className="p-2 bg-green-200 rounded-lg">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-green-900">
+                    R$ {salesData.totalRevenue.toFixed(2)}
+                  </div>
+                  <p className="text-xs text-green-600 mt-1">
+                    Ticket médio: R$ {salesData.averageTicket.toFixed(2)}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-purple-700">
+                    Ticket Médio
+                  </CardTitle>
+                  <div className="p-2 bg-purple-200 rounded-lg">
+                    <Users className="h-4 w-4 text-purple-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-purple-900">
+                    R$ {salesData.averageTicket.toFixed(2)}
+                  </div>
+                  <p className="text-xs text-purple-600 mt-1">
+                    Baseado em {salesData.totalSales} vendas
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Tabs de Relatórios */}
+            <Tabs defaultValue="overview" className="space-y-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+              <TabsList>
+                <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+                <TabsTrigger value="products">Produtos</TabsTrigger>
+                <TabsTrigger value="payments">Pagamentos</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <PaymentMethodChart />
+                  <ProductSalesChart />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="products" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Análise de Produtos</CardTitle>
+                    <CardDescription>
+                      Desempenho detalhado de vendas por produto
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ProductSalesChart />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="payments" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Análise de Pagamentos</CardTitle>
+                    <CardDescription>
+                      Métodos de pagamento e estatísticas detalhadas
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <PaymentMethodChart />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </>
         )}
       </main>
     </div>
