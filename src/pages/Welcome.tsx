@@ -2,8 +2,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Heart } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 const Welcome = () => {
   const { user } = useAuth();
@@ -23,8 +22,9 @@ const Welcome = () => {
     console.log('Welcome page mounted, starting 3 second timer...');
     
     const timer = setTimeout(() => {
-      console.log('Welcome timer complete, redirecting to loading...');
-      navigate('/loading');
+      console.log('Welcome timer complete, redirecting to dashboard...');
+      // Redirecionar diretamente para o dashboard sem loading extra
+      navigate('/', { replace: true });
     }, 3000);
 
     return () => {
@@ -34,13 +34,13 @@ const Welcome = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom relative overflow-hidden">
-      {/* Background image */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-100 flex items-center justify-center p-4 safe-area-top safe-area-bottom relative overflow-hidden">
+      {/* Background brasão FSSPX */}
       <div className="absolute inset-0 opacity-5 pointer-events-none">
         <img 
-          src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
-          alt="Imaculada Conceição"
-          className="w-full h-full object-cover object-center"
+          src="https://upload.wikimedia.org/wikipedia/commons/6/67/H%C3%A9raldique_meuble_Coeur_vend%C3%A9en.svg" 
+          alt="FSSPX Brasão"
+          className="w-full h-full object-contain object-center"
         />
       </div>
       
@@ -58,44 +58,39 @@ const Welcome = () => {
         </div>
 
         <div className="text-center space-y-6 bg-white/95 backdrop-blur-sm border border-white/20 shadow-xl rounded-lg p-8 relative overflow-hidden">
-          {/* Background decoration */}
+          {/* Background decoration com brasão */}
           <div className="absolute top-0 right-0 opacity-10">
             <img 
-              src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
-              alt="Imaculada Conceição"
+              src="https://upload.wikimedia.org/wikipedia/commons/6/67/H%C3%A9raldique_meuble_Coeur_vend%C3%A9en.svg" 
+              alt="FSSPX Brasão"
               className="h-32 w-auto object-contain"
             />
           </div>
           
           <div className="relative z-10">
             <div className="flex justify-center mb-4">
-              <div className="relative">
-                <CheckCircle className="h-16 w-16 text-green-500" />
-                <div className="absolute -top-1 -right-1">
-                  <Heart className="h-6 w-6 text-red-500 animate-pulse" />
-                </div>
-              </div>
+              <CheckCircle className="h-16 w-16 text-emerald-500" />
             </div>
             
             <div>
-              <h1 className="text-2xl font-bold text-green-600 mb-2">
+              <h1 className="text-2xl font-bold text-emerald-600 mb-2">
                 Login Realizado com Sucesso!
               </h1>
-              <p className="text-gray-600 mb-4">
+              <p className="text-slate-600 mb-4">
                 Bem-vindo, {getUserName()}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-slate-500">
                 Preparando o sistema da Livraria Imaculada Conceição...
               </p>
             </div>
 
             <div className="mt-6 space-y-2">
-              <div className="flex items-center justify-center space-x-2 text-green-600">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <div className="flex items-center justify-center space-x-2 text-emerald-600">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                 <span className="text-sm">Sistema autenticado</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 text-blue-600">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
+              <div className="flex items-center justify-center space-x-2 text-slate-600">
+                <div className="w-2 h-2 bg-slate-500 rounded-full animate-pulse" style={{animationDelay: '0.5s'}}></div>
                 <span className="text-sm">Carregando painel administrativo</span>
               </div>
             </div>
@@ -104,7 +99,7 @@ const Welcome = () => {
 
         {/* Catholic decoration */}
         <div className="text-center">
-          <p className="text-xs text-blue-600 opacity-60">
+          <p className="text-xs text-slate-600 opacity-60">
             Imaculada Conceição, rogai por nós
           </p>
         </div>

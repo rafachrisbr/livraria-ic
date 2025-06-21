@@ -2,6 +2,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
+import { CurrentDateTime } from '@/components/ui/CurrentDateTime';
 
 export const DashboardHeader = () => {
   const { user, signOut } = useAuth();
@@ -24,12 +25,13 @@ export const DashboardHeader = () => {
               }}
             />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Painel</h1>
-              <p className="text-gray-600">Gestão da Livraria IC</p>
+              <h1 className="text-2xl font-bold text-slate-900">Painel</h1>
+              <p className="text-slate-600">Gestão da Livraria IC</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600 hidden sm:inline">{user?.email}</span>
+            <CurrentDateTime />
+            <span className="text-sm text-slate-600 hidden sm:inline">{user?.email}</span>
             <ChangePasswordDialog />
             <Button onClick={handleLogout} variant="outline" size="sm">
               Logout

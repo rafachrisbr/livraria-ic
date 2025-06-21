@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
-import { BookOpen, Heart } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
 export const WelcomeSection = () => {
   const { user } = useAuth();
@@ -18,17 +18,17 @@ export const WelcomeSection = () => {
 
   return (
     <div className="mb-8">
-      <Card className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl border-0">
+      <Card className="bg-gradient-to-r from-slate-600 to-slate-700 text-white shadow-xl border-0">
         <CardContent className="p-6 sm:p-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold mb-2">
                 Bem-vindo, {getUserName()}!
               </h1>
-              <p className="text-blue-100 text-sm sm:text-base">
+              <p className="text-slate-100 text-sm sm:text-base">
                 Sistema de Gestão da Livraria Imaculada Conceição
               </p>
-              <p className="text-blue-200 text-xs sm:text-sm mt-1">
+              <p className="text-slate-200 text-xs sm:text-sm mt-1">
                 Capela Imaculada Conceição - Indaiatuba, SP
               </p>
             </div>
@@ -36,14 +36,11 @@ export const WelcomeSection = () => {
               <div className="p-3 bg-white/20 rounded-lg">
                 <BookOpen className="h-8 w-8" />
               </div>
-              <div className="p-2 bg-white/10 rounded-lg">
-                <Heart className="h-6 w-6" />
-              </div>
             </div>
           </div>
           
-          <div className="mt-4 pt-4 border-t border-blue-500/30">
-            <p className="text-blue-100 text-xs text-center">
+          <div className="mt-4 pt-4 border-t border-slate-500/30">
+            <p className="text-slate-100 text-xs text-center">
               "Sub tuum praesidium confugimus, Sancta Dei Genetrix"
             </p>
           </div>

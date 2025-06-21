@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Login from './Login';
 import Dashboard from './Dashboard';
@@ -28,10 +28,10 @@ const Index = () => {
   // Se ainda está carregando a autenticação inicial, mostrar um loading mínimo
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
-          <p className="text-sm text-gray-600">Verificando autenticação...</p>
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-slate-600" />
+          <p className="text-sm text-slate-600">Verificando autenticação...</p>
         </div>
       </div>
     );
@@ -50,10 +50,10 @@ const Index = () => {
       window.location.href = '/';
     }, 100);
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
-          <p className="text-sm text-gray-600">Redirecionando...</p>
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-slate-600" />
+          <p className="text-sm text-slate-600">Redirecionando...</p>
         </div>
       </div>
     );

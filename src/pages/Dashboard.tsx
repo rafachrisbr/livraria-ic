@@ -50,11 +50,11 @@ const Dashboard = () => {
         />
         
         <main className="px-4 py-6 space-y-6 relative">
-          {/* Imagem de fundo móvel - Imaculada Conceição */}
+          {/* Brasão FSSPX móvel */}
           <div className="fixed top-20 right-4 opacity-5 pointer-events-none z-0">
             <img 
-              src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
-              alt="Imaculada Conceição"
+              src="https://upload.wikimedia.org/wikipedia/commons/6/67/H%C3%A9raldique_meuble_Coeur_vend%C3%A9en.svg" 
+              alt="FSSPX Brasão"
               className="h-32 w-auto object-contain"
             />
           </div>
@@ -79,11 +79,11 @@ const Dashboard = () => {
       <DashboardHeader />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-        {/* Imagem de fundo desktop - Imaculada Conceição */}
+        {/* Brasão FSSPX desktop */}
         <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none z-0">
           <img 
-            src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
-            alt="Imaculada Conceição"
+            src="https://upload.wikimedia.org/wikipedia/commons/6/67/H%C3%A9raldique_meuble_Coeur_vend%C3%A9en.svg" 
+            alt="FSSPX Brasão"
             className="h-96 w-auto object-contain"
           />
         </div>

@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, DollarSign, Calendar, AlertTriangle, ShoppingCart, Download, Percent } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +11,7 @@ import { ProductSalesChart } from '@/components/reports/ProductSalesChart';
 import { PaymentMethodChart } from '@/components/reports/PaymentMethodChart';
 import { useExcelExport } from '@/hooks/useExcelExport';
 import { useToast } from '@/hooks/use-toast';
+import { CurrentDateTime } from '@/components/ui/CurrentDateTime';
 
 interface ReportData {
   totalSales: number;
@@ -34,6 +37,7 @@ interface PromotionReport {
 
 const Reports = () => {
   const { user, signOut } = useAuth();
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [reportData, setReportData] = useState<ReportData>({
     totalSales: 0,
     totalRevenue: 0,
@@ -51,7 +55,7 @@ const Reports = () => {
   useEffect(() => {
     fetchReportData();
     fetchPromotionSales();
-  }, []);
+  }, [selectedMonth]);
 
   const fetchReportData = async () => {
     try {
@@ -64,10 +68,15 @@ const Reports = () => {
 
       if (productsError) throw productsError;
 
-      // Buscar dados das vendas
+      // Buscar dados das vendas filtradas por mês
+      const startDate = `${selectedMonth}-01`;
+      const endDate = new Date(new Date(selectedMonth).getFullYear(), new Date(selectedMonth).getMonth() + 1, 0).toISOString().split('T')[0];
+      
       const { data: sales, error: salesError } = await supabase
         .from('sales')
-        .select('total_price');
+        .select('total_price')
+        .gte('sale_date', startDate)
+        .lte('sale_date', endDate);
 
       if (salesError) throw salesError;
 
@@ -98,7 +107,10 @@ const Reports = () => {
 
   const fetchPromotionSales = async () => {
     try {
-      // Buscar todas as vendas que têm dados promocionais (seja pelo promotion_id ativo ou dados históricos)
+      // Filtros de data baseados no mês selecionado
+      const startDate = `${selectedMonth}-01`;
+      const endDate = new Date(new Date(selectedMonth).getFullYear(), new Date(selectedMonth).getMonth() + 1, 0).toISOString().split('T')[0];
+      
       const { data, error } = await supabase
         .from("sales")
         .select(
@@ -109,23 +121,23 @@ const Reports = () => {
             promotion:promotions(id, name, discount_type, discount_value)
           `
         )
-        .or('promotion_id.not.is.null,promotion_name.not.is.null') // Vendas com promoção ativa OU dados históricos
+        .or('promotion_id.not.is.null,promotion_name.not.is.null')
+        .gte('sale_date', startDate)
+        .lte('sale_date', endDate)
         .order("sale_date", { ascending: false });
 
       if (error) throw error;
 
       const mapped: PromotionReport[] = (data || [])
         .map((sale: any) => {
-          // Priorizar dados históricos se disponíveis, senão usar dados da promoção ativa
           const promotionName = sale.promotion_name || sale.promotion?.name;
           const discountType = sale.promotion_discount_type || sale.promotion?.discount_type;
           const discountValue = sale.promotion_discount_value || sale.promotion?.discount_value;
 
           if (!promotionName || !discountType || discountValue === null) {
-            return null; // Filtrar vendas sem dados promocionais válidos
+            return null;
           }
 
-          // Calcular o valor promocional correto
           let pricePromo = sale.unit_price;
           if (discountType === "percentage") {
             pricePromo = sale.unit_price * (1 - (discountValue / 100));
@@ -147,7 +159,7 @@ const Reports = () => {
             total_saved,
           };
         })
-        .filter(Boolean); // Remover nulls
+        .filter(Boolean);
 
       setPromotionSales(mapped);
     } catch (err: any) {
@@ -180,14 +192,26 @@ const Reports = () => {
     await signOut();
   };
 
+  const generateMonthOptions = () => {
+    const options = [];
+    const currentDate = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const value = date.toISOString().slice(0, 7);
+      const label = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      options.push({ value, label });
+    }
+    return options;
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 relative overflow-hidden">
-      {/* Background image */}
+      {/* Background brasão FSSPX */}
       <div className="fixed inset-0 opacity-5 pointer-events-none">
         <img 
-          src="https://osaopaulo.org.br/wp-content/uploads/2020/12/dgh.jpg" 
-          alt="Imaculada Conceição"
-          className="w-full h-full object-cover object-center"
+          src="https://upload.wikimedia.org/wikipedia/commons/6/67/H%C3%A9raldique_meuble_Coeur_vend%C3%A9en.svg" 
+          alt="FSSPX Brasão"
+          className="w-full h-full object-contain object-center"
         />
       </div>
       
@@ -202,11 +226,12 @@ const Reports = () => {
                 </Button>
               </Link>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-                <p className="text-gray-600">Livraria Imaculada Conceição</p>
+                <h1 className="text-2xl font-bold text-slate-900">Relatórios</h1>
+                <p className="text-slate-600">Livraria Imaculada Conceição</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <CurrentDateTime />
               <Button 
                 onClick={handleExport} 
                 disabled={exporting}
@@ -215,7 +240,7 @@ const Reports = () => {
                 <Download className="h-4 w-4 mr-2" />
                 {exporting ? 'Exportando...' : 'Exportar Excel'}
               </Button>
-              <span className="text-sm text-gray-600">{user?.email}</span>
+              <span className="text-sm text-slate-600">{user?.email}</span>
               <Button onClick={handleLogout} variant="outline" size="sm">
                 Logout
               </Button>
@@ -225,6 +250,35 @@ const Reports = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+        {/* Filtro de Mês */}
+        <div className="mb-6">
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center space-x-2">
+                <Calendar className="h-5 w-5 text-slate-600" />
+                <span>Filtros do Relatório</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-4">
+                <label className="text-sm font-medium text-slate-700">Mês:</label>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {generateMonthOptions().map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {loading ? (
           <div className="text-center py-8">Carregando relatórios...</div>
         ) : (
@@ -234,13 +288,13 @@ const Reports = () => {
               <Card className="bg-white border-slate-200 shadow-sm">
                 <CardHeader className="pb-4">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <DollarSign className="h-5 w-5 text-green-600" />
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <DollarSign className="h-5 w-5 text-emerald-600" />
                     </div>
                     <div>
                       <CardTitle className="text-slate-800 text-lg">Vendas Totais</CardTitle>
                       <CardDescription className="text-sm">
-                        Receita total
+                        Receita do mês
                       </CardDescription>
                     </div>
                   </div>
