@@ -89,7 +89,20 @@ export const ProductsList = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-4">Carregando produtos...</div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between p-3 border rounded-lg animate-pulse">
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+                <div className="text-right">
+                  <div className="h-4 bg-gray-200 rounded w-16 mb-1"></div>
+                  <div className="h-3 bg-gray-200 rounded w-12"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
@@ -157,7 +170,7 @@ export const ProductsList = () => {
         )}
       </CardContent>
       <CardFooter className="border-t bg-slate-50">
-        <Link to="/inventory" className="w-full">
+        <Link to="/products" className="w-full">
           <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold">
             <Warehouse className="h-4 w-4 mr-2" />
             Controle de Estoque Completo

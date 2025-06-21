@@ -8,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 interface DashboardStats {
   totalProducts: number;
   totalValue: number;
+  totalValueWithDiscount: number;
+  totalDiscount: number;
   lowStockProducts: number;
   outOfStockProducts: number;
   recentSales: number;
@@ -18,6 +20,8 @@ export const StatsCards = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalProducts: 0,
     totalValue: 0,
+    totalValueWithDiscount: 0,
+    totalDiscount: 0,
     lowStockProducts: 0,
     outOfStockProducts: 0,
     recentSales: 0,
@@ -66,10 +70,14 @@ export const StatsCards = () => {
       const totalProducts = products?.length || 0;
       
       let totalValue = 0;
+      let totalValueWithDiscount = 0;
       let lowStockProducts = 0;
       let outOfStockProducts = 0;
 
       products?.forEach(product => {
+        const originalValue = product.price * product.stock_quantity;
+        totalValue += originalValue;
+
         // Verificar se produto tem promoção ativa
         const promotion = promotions?.find(p => 
           p.product_promotions?.some((pp: any) => pp.product_id === product.id)
@@ -85,7 +93,7 @@ export const StatsCards = () => {
           }
         }
 
-        totalValue += effectivePrice * product.stock_quantity;
+        totalValueWithDiscount += effectivePrice * product.stock_quantity;
 
         if (product.stock_quantity === 0) {
           outOfStockProducts++;
@@ -94,12 +102,15 @@ export const StatsCards = () => {
         }
       });
 
+      const totalDiscount = totalValue - totalValueWithDiscount;
       const recentSales = todaySales?.length || 0;
       const todayRevenue = todaySales?.reduce((sum, sale) => sum + sale.total_price, 0) || 0;
 
       setStats({
         totalProducts,
         totalValue,
+        totalValueWithDiscount,
+        totalDiscount,
         lowStockProducts,
         outOfStockProducts,
         recentSales,
@@ -116,14 +127,16 @@ export const StatsCards = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {[...Array(6)].map((_, i) => (
-          <Card key={i} className="bg-white border-slate-200 shadow-sm animate-pulse">
+          <Card key={i} className="bg-white border-slate-200 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="h-4 bg-gray-200 rounded w-24"></div>
-              <div className="h-4 w-4 bg-gray-200 rounded"></div>
+              <div className="space-y-2">
+                <div className="h-4 bg-gradient-to-r from-gray-200 to-gray-300 rounded animate-pulse"></div>
+                <div className="h-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded animate-pulse w-20"></div>
+              </div>
+              <div className="h-8 w-8 bg-gradient-to-r from-gray-200 to-gray-300 rounded-lg animate-pulse"></div>
             </CardHeader>
             <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-20"></div>
+              <div className="h-3 bg-gradient-to-r from-gray-200 to-gray-300 rounded animate-pulse w-24"></div>
             </CardContent>
           </Card>
         ))}
@@ -160,12 +173,28 @@ export const StatsCards = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-green-900">
-            R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </div>
-          <p className="text-xs text-green-600 mt-1">
-            incluindo promoções
-          </p>
+          {stats.totalDiscount > 0 ? (
+            <div>
+              <div className="text-lg font-bold text-gray-500 line-through">
+                R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <div className="text-2xl font-bold text-green-900">
+                R$ {stats.totalValueWithDiscount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <p className="text-xs text-green-600 mt-1">
+                economia de R$ {stats.totalDiscount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <div className="text-3xl font-bold text-green-900">
+                R$ {stats.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <p className="text-xs text-green-600 mt-1">
+                valor sem promoções
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

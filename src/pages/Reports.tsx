@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Calendar, TrendingUp, DollarSign, Users, Package, Download, ArrowLeft } from 'lucide-react';
+import { Calendar, TrendingUp, DollarSign, Users, Package, Download, ArrowLeft, Tag } from 'lucide-react';
 import { PaymentMethodChart } from '@/components/reports/PaymentMethodChart';
 import { ProductSalesChart } from '@/components/reports/ProductSalesChart';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +20,8 @@ interface SalesData {
   totalSales: number;
   totalRevenue: number;
   averageTicket: number;
+  salesWithPromotions: number;
+  promotionalRevenue: number;
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
   paymentMethods: Array<{ method: string; count: number; percentage: number }>;
 }
@@ -28,6 +31,8 @@ const Reports = () => {
     totalSales: 0,
     totalRevenue: 0,
     averageTicket: 0,
+    salesWithPromotions: 0,
+    promotionalRevenue: 0,
     topProducts: [],
     paymentMethods: [],
   });
@@ -95,6 +100,12 @@ const Reports = () => {
       const totalRevenue = sales.reduce((sum, sale) => sum + (sale.total_price || 0), 0);
       const averageTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
 
+      // Contar vendas com promoções
+      const salesWithPromotions = sales.filter(sale => sale.has_promotion === true).length;
+      const promotionalRevenue = sales
+        .filter(sale => sale.has_promotion === true)
+        .reduce((sum, sale) => sum + (sale.total_price || 0), 0);
+
       // Top produtos
       const productSales = sales.reduce((acc: Record<string, { quantity: number; revenue: number }>, sale) => {
         const productName = sale.products?.name || 'Produto Desconhecido';
@@ -128,6 +139,8 @@ const Reports = () => {
         totalSales,
         totalRevenue,
         averageTicket,
+        salesWithPromotions,
+        promotionalRevenue,
         topProducts,
         paymentMethods,
       });
@@ -448,6 +461,7 @@ const Reports = () => {
               <div className="relative">
                 <div className="w-16 h-16 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin"></div>
                 <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+                <div className="absolute inset-2 w-12 h-12 border-2 border-transparent border-t-green-500 rounded-full animate-spin" style={{ animationDelay: '0.2s' }}></div>
               </div>
               <div className="text-center space-y-2">
                 <div className="text-lg font-semibold text-slate-700 animate-fade-in">
@@ -456,19 +470,23 @@ const Reports = () => {
                 <div className="text-sm text-slate-500 animate-fade-in" style={{ animationDelay: '0.2s' }}>
                   Processando dados de vendas
                 </div>
+                <div className="flex space-x-1 mt-4">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
               </div>
             </div>
             
             {/* Skeleton Loading Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
                 <Card key={i} className="animate-pulse">
                   <CardHeader className="space-y-2">
                     <Skeleton className="h-4 w-32" />
                     <Skeleton className="h-8 w-16" />
                   </CardHeader>
                   <CardContent>
-                    <Skeleton className="h-8 w-24" />
                     <Skeleton className="h-3 w-40 mt-2" />
                   </CardContent>
                 </Card>
@@ -487,7 +505,7 @@ const Reports = () => {
         ) : (
           <>
             {/* Cards de Estatísticas */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in">
               <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-blue-700">
@@ -539,6 +557,23 @@ const Reports = () => {
                   </div>
                   <p className="text-xs text-purple-600 mt-1">
                     Baseado em {salesData.totalSales} vendas
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-orange-700">
+                    Vendas com Promoção
+                  </CardTitle>
+                  <div className="p-2 bg-orange-200 rounded-lg">
+                    <Tag className="h-4 w-4 text-orange-600" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-orange-900">{salesData.salesWithPromotions}</div>
+                  <p className="text-xs text-orange-600 mt-1">
+                    R$ {salesData.promotionalRevenue.toFixed(2)} em receita
                   </p>
                 </CardContent>
               </Card>
