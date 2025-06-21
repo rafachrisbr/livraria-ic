@@ -42,7 +42,7 @@ export const DeletePromotionDialog = ({
 
       console.log('Dados da promoção encontrados:', promotionData);
 
-      // Atualizar vendas relacionadas com dados históricos da promoção (MANTENDO promotion_id)
+      // Atualizar vendas relacionadas com dados históricos da promoção ANTES de excluir
       const { error: salesUpdateError } = await supabase
         .from('sales')
         .update({ 
@@ -83,7 +83,7 @@ export const DeletePromotionDialog = ({
 
       console.log('Associações produto-promoção removidas');
       
-      // Finalmente, remover a promoção
+      // Finalmente, remover a promoção (promotion_id será definido como NULL automaticamente pela constraint)
       const { error: promotionError } = await supabase
         .from("promotions")
         .delete()
