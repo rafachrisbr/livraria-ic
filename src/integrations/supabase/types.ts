@@ -352,6 +352,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_all_audit_logs: {
+        Args: { confirmation_keyword: string }
+        Returns: number
+      }
       delete_all_categories: {
         Args: Record<PropertyKey, never>
         Returns: number

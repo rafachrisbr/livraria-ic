@@ -8,6 +8,7 @@ import { UserManagementCard } from './UserManagementCard';
 import { SalesManagementCard } from './SalesManagementCard';
 import { ProductManagementCard } from './ProductManagementCard';
 import { CategoryManagementCard } from './CategoryManagementCard';
+import { AuditLogManagementCard } from './AuditLogManagementCard';
 
 interface SuperAdminContentProps {
   isMobile: boolean;
@@ -50,6 +51,7 @@ export const SuperAdminContent = ({ isMobile }: SuperAdminContentProps) => {
         <SalesManagementCard />
         <ProductManagementCard />
         <CategoryManagementCard />
+        <AuditLogManagementCard />
       </div>
     </>
   );
@@ -106,6 +108,7 @@ export const SuperAdminContent = ({ isMobile }: SuperAdminContentProps) => {
           <SalesManagementCard />
           <ProductManagementCard />
           <CategoryManagementCard />
+          <AuditLogManagementCard />
         </div>
       </div>
     </main>

@@ -12,8 +12,10 @@ interface DashboardStats {
   totalDiscount: number;
   lowStockProducts: number;
   outOfStockProducts: number;
-  recentSales: number;
+  todaySales: number;
   todayRevenue: number;
+  todayProductsSold: number;
+  todayUniqueProducts: number;
 }
 
 export const StatsCards = () => {
@@ -24,8 +26,10 @@ export const StatsCards = () => {
     totalDiscount: 0,
     lowStockProducts: 0,
     outOfStockProducts: 0,
-    recentSales: 0,
+    todaySales: 0,
     todayRevenue: 0,
+    todayProductsSold: 0,
+    todayUniqueProducts: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -58,12 +62,13 @@ export const StatsCards = () => {
 
       if (promotionsError) throw promotionsError;
 
-      // Buscar vendas de hoje
+      // Buscar vendas de hoje APENAS
       const today = new Date().toISOString().split('T')[0];
       const { data: todaySales, error: salesError } = await supabase
         .from('sales')
         .select('*')
-        .gte('sale_date', today);
+        .gte('sale_date', today)
+        .lt('sale_date', `${today}T23:59:59.999Z`);
 
       if (salesError) throw salesError;
 
@@ -120,8 +125,12 @@ export const StatsCards = () => {
       });
 
       const totalDiscount = totalValue - totalValueWithDiscount;
-      const recentSales = todaySales?.length || 0;
+      
+      // Estatísticas do dia atual
+      const todaySalesCount = todaySales?.length || 0;
       const todayRevenue = todaySales?.reduce((sum, sale) => sum + sale.total_price, 0) || 0;
+      const todayProductsSold = todaySales?.reduce((sum, sale) => sum + sale.quantity, 0) || 0;
+      const todayUniqueProducts = new Set(todaySales?.map(sale => sale.product_id)).size;
 
       setStats({
         totalProducts,
@@ -130,8 +139,10 @@ export const StatsCards = () => {
         totalDiscount,
         lowStockProducts,
         outOfStockProducts,
-        recentSales,
+        todaySales: todaySalesCount,
         todayRevenue,
+        todayProductsSold,
+        todayUniqueProducts,
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -259,9 +270,9 @@ export const StatsCards = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-purple-900">{stats.recentSales}</div>
+          <div className="text-3xl font-bold text-purple-900">{stats.todaySales}</div>
           <p className="text-xs text-purple-600 mt-1">
-            transações realizadas
+            {stats.todayProductsSold} produtos vendidos
           </p>
         </CardContent>
       </Card>
@@ -280,7 +291,7 @@ export const StatsCards = () => {
             R$ {stats.todayRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-xs text-teal-600 mt-1">
-            faturamento do dia
+            {stats.todayUniqueProducts} produtos diferentes
           </p>
         </CardContent>
       </Card>
