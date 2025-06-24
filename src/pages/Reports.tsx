@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -65,6 +66,19 @@ const Reports = () => {
     fetchProductsWithoutSales();
   }, [selectedYear, selectedMonth, selectedWeek, selectedDay, filterType]);
 
+  // Resetar filtros quando o tipo de filtro muda
+  useEffect(() => {
+    setSelectedMonth('all');
+    setSelectedWeek('all');
+    setSelectedDay('all');
+  }, [filterType]);
+
+  // Resetar semana e dia quando o mês muda
+  useEffect(() => {
+    setSelectedWeek('all');
+    setSelectedDay('all');
+  }, [selectedMonth]);
+
   const fetchProductsWithoutSales = async () => {
     try {
       const oneMonthAgo = new Date();
@@ -131,16 +145,19 @@ const Reports = () => {
         startDate = `${selectedYear}-${month}-01`;
         const lastDay = new Date(parseInt(selectedYear), parseInt(month), 0).getDate();
         endDate = `${selectedYear}-${month}-${lastDay}`;
-      } else if (filterType === 'week' && selectedWeek !== 'all') {
-        // Calcular início e fim da semana
+      } else if (filterType === 'week' && selectedWeek !== 'all' && selectedMonth !== 'all') {
+        // Calcular início e fim da semana específica do mês
+        const month = parseInt(selectedMonth);
         const weekNumber = parseInt(selectedWeek);
-        const firstDayOfYear = new Date(parseInt(selectedYear), 0, 1);
-        const daysOffset = (weekNumber - 1) * 7;
-        const weekStart = new Date(firstDayOfYear.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+        const firstDayOfMonth = new Date(parseInt(selectedYear), month - 1, 1);
+        const weekStart = new Date(firstDayOfMonth.getTime() + (weekNumber - 1) * 7 * 24 * 60 * 60 * 1000);
         const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
         
+        // Garantir que não ultrapasse o mês
+        const lastDayOfMonth = new Date(parseInt(selectedYear), month, 0);
+        
         startDate = weekStart.toISOString().split('T')[0];
-        endDate = weekEnd.toISOString().split('T')[0];
+        endDate = weekEnd > lastDayOfMonth ? lastDayOfMonth.toISOString().split('T')[0] : weekEnd.toISOString().split('T')[0];
       } else if (filterType === 'day' && selectedDay !== 'all') {
         startDate = selectedDay;
         endDate = selectedDay;
@@ -318,25 +335,54 @@ const Reports = () => {
     { value: '12', label: 'Dezembro' },
   ];
 
-  const weeks = [
-    { value: 'all', label: 'Todas as semanas' },
-    ...Array.from({ length: 52 }, (_, i) => ({
-      value: String(i + 1),
-      label: `Semana ${i + 1}`
-    }))
-  ];
+  // Gerar semanas do mês selecionado
+  const generateWeeksForSelectedMonth = () => {
+    if (selectedMonth === 'all') return [];
+    
+    const year = parseInt(selectedYear);
+    const month = parseInt(selectedMonth);
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    
+    const weeks = [{ value: 'all', label: 'Todas as semanas' }];
+    
+    let currentWeek = 1;
+    let currentDate = new Date(firstDay);
+    
+    while (currentDate <= lastDay) {
+      const weekStart = new Date(currentDate);
+      const weekEnd = new Date(currentDate.getTime() + 6 * 24 * 60 * 60 * 1000);
+      
+      // Ajustar o fim da semana para não passar do mês
+      if (weekEnd > lastDay) {
+        weekEnd.setTime(lastDay.getTime());
+      }
+      
+      weeks.push({
+        value: String(currentWeek),
+        label: `Semana ${currentWeek} (${weekStart.getDate()}/${String(month).padStart(2, '0')} - ${weekEnd.getDate()}/${String(month).padStart(2, '0')})`
+      });
+      
+      currentDate.setTime(currentDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+      currentWeek++;
+    }
+    
+    return weeks;
+  };
 
-  const generateDaysForCurrentMonth = () => {
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+  // Gerar dias do mês selecionado
+  const generateDaysForSelectedMonth = () => {
+    if (selectedMonth === 'all') return [];
+    
+    const year = parseInt(selectedYear);
+    const month = parseInt(selectedMonth);
+    const daysInMonth = new Date(year, month, 0).getDate();
     
     const days = [{ value: 'all', label: 'Todos os dias' }];
     
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dateObj = new Date(year, month, day);
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dateObj = new Date(year, month - 1, day);
       const dayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' });
       
       days.push({
@@ -386,7 +432,7 @@ const Reports = () => {
                 </SelectContent>
               </Select>
               
-              {filterType === 'month' && (
+              {(filterType === 'month' || filterType === 'week' || filterType === 'day') && (
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Selecionar mês" />
@@ -401,13 +447,13 @@ const Reports = () => {
                 </Select>
               )}
               
-              {filterType === 'week' && (
+              {filterType === 'week' && selectedMonth !== 'all' && (
                 <Select value={selectedWeek} onValueChange={setSelectedWeek}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-64">
                     <SelectValue placeholder="Selecionar semana" />
                   </SelectTrigger>
                   <SelectContent>
-                    {weeks.map((week) => (
+                    {generateWeeksForSelectedMonth().map((week) => (
                       <SelectItem key={week.value} value={week.value}>
                         {week.label}
                       </SelectItem>
@@ -416,13 +462,13 @@ const Reports = () => {
                 </Select>
               )}
               
-              {filterType === 'day' && (
+              {filterType === 'day' && selectedMonth !== 'all' && (
                 <Select value={selectedDay} onValueChange={setSelectedDay}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Selecionar dia" />
                   </SelectTrigger>
                   <SelectContent>
-                    {generateDaysForCurrentMonth().map((day) => (
+                    {generateDaysForSelectedMonth().map((day) => (
                       <SelectItem key={day.value} value={day.value}>
                         {day.label}
                       </SelectItem>
@@ -674,7 +720,7 @@ const Reports = () => {
               </SelectContent>
             </Select>
             
-            {filterType === 'month' && (
+            {(filterType === 'month' || filterType === 'week' || filterType === 'day') && (
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Selecionar mês" />
@@ -689,13 +735,13 @@ const Reports = () => {
               </Select>
             )}
 
-            {filterType === 'week' && (
+            {filterType === 'week' && selectedMonth !== 'all' && (
               <Select value={selectedWeek} onValueChange={setSelectedWeek}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-64">
                   <SelectValue placeholder="Selecionar semana" />
                 </SelectTrigger>
                 <SelectContent>
-                  {weeks.map((week) => (
+                  {generateWeeksForSelectedMonth().map((week) => (
                     <SelectItem key={week.value} value={week.value}>
                       {week.label}
                     </SelectItem>
@@ -704,13 +750,13 @@ const Reports = () => {
               </Select>
             )}
 
-            {filterType === 'day' && (
+            {filterType === 'day' && selectedMonth !== 'all' && (
               <Select value={selectedDay} onValueChange={setSelectedDay}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Selecionar dia" />
                 </SelectTrigger>
                 <SelectContent>
-                  {generateDaysForCurrentMonth().map((day) => (
+                  {generateDaysForSelectedMonth().map((day) => (
                     <SelectItem key={day.value} value={day.value}>
                       {day.label}
                     </SelectItem>
@@ -731,13 +777,9 @@ const Reports = () => {
             {/* Elegant Dynamic Loading Animation */}
             <div className="flex flex-col items-center justify-center py-16 space-y-8">
               <div className="relative">
-                {/* Main spinning ring */}
                 <div className="w-20 h-20 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
-                {/* Secondary ring with delay */}
                 <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-t-green-500 rounded-full animate-spin opacity-75" style={{ animationDelay: '0.15s', animationDuration: '1.2s' }}></div>
-                {/* Inner ring */}
                 <div className="absolute inset-3 w-14 h-14 border-2 border-transparent border-t-purple-500 rounded-full animate-spin opacity-60" style={{ animationDelay: '0.3s', animationDuration: '0.8s' }}></div>
-                {/* Center pulse */}
                 <div className="absolute inset-6 w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
               </div>
               
@@ -749,7 +791,6 @@ const Reports = () => {
                   Processando dados de vendas e estatísticas
                 </div>
                 
-                {/* Dynamic loading indicators */}
                 <div className="flex justify-center space-x-2 mt-6">
                   <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -757,14 +798,12 @@ const Reports = () => {
                   <div className="w-3 h-3 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
                 </div>
                 
-                {/* Progress bar simulation */}
                 <div className="w-64 h-2 bg-slate-200 rounded-full overflow-hidden mt-4">
                   <div className="h-full bg-gradient-to-r from-blue-500 via-green-500 to-purple-500 rounded-full animate-pulse"></div>
                 </div>
               </div>
             </div>
             
-            {/* Enhanced Skeleton Loading Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               {[1, 2, 3, 4].map((i) => (
                 <Card key={i} className="animate-pulse border border-slate-200">
@@ -782,7 +821,6 @@ const Reports = () => {
               ))}
             </div>
             
-            {/* Skeleton Tabs */}
             <div className="space-y-6">
               <Skeleton className="h-10 w-96 bg-gradient-to-r from-slate-200 to-slate-300" />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -868,7 +906,6 @@ const Reports = () => {
               </Card>
             </div>
 
-            {/* Tabs de Relatórios */}
             <Tabs defaultValue="overview" className="space-y-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
               <TabsList>
                 <TabsTrigger value="overview">Visão Geral</TabsTrigger>
