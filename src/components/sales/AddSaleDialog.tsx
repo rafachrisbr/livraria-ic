@@ -113,7 +113,7 @@ export const AddSaleDialog = ({ onSaleAdded }: AddSaleDialogProps) => {
         .from('products')
         .select('id, name, price, stock_quantity, product_code')
         .gt('stock_quantity', 0)
-        .order('name');
+        .order('product_code', { ascending: true });
 
       if (error) throw error;
       setProducts(data || []);
