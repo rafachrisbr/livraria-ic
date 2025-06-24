@@ -54,7 +54,7 @@ export const ProductsList = () => {
             name
           )
         `)
-        .order('name');
+        .order('product_code', { ascending: true });
 
       if (error) {
         console.error('Error fetching products:', error);

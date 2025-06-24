@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Calendar, TrendingUp, DollarSign, Users, Package, Download, ArrowLeft, Tag } from 'lucide-react';
+import { Calendar, TrendingUp, DollarSign, Users, Package, Download, ArrowLeft, Tag, AlertTriangle, TrendingDown } from 'lucide-react';
 import { PaymentMethodChart } from '@/components/reports/PaymentMethodChart';
 import { ProductSalesChart } from '@/components/reports/ProductSalesChart';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +13,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface SalesData {
   totalSales: number;
@@ -24,6 +24,14 @@ interface SalesData {
   promotionalRevenue: number;
   topProducts: Array<{ name: string; quantity: number; revenue: number }>;
   paymentMethods: Array<{ method: string; count: number; percentage: number }>;
+}
+
+interface ProductWithoutSales {
+  id: string;
+  name: string;
+  product_code: string;
+  last_sale_date: string | null;
+  days_without_sales: number;
 }
 
 const Reports = () => {
@@ -36,20 +44,79 @@ const Reports = () => {
     topProducts: [],
     paymentMethods: [],
   });
+  const [productsWithoutSales, setProductsWithoutSales] = useState<ProductWithoutSales[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<string>('2025');
   const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [selectedWeek, setSelectedWeek] = useState<string>('all');
+  const [selectedDay, setSelectedDay] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>('month');
   const { exportReportsToExcel } = useExcelExport();
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   // Data de início fixada em 01/06/2025
   const FILTER_START_DATE = '2025-06-01';
 
   useEffect(() => {
     fetchSalesData();
-  }, [selectedYear, selectedMonth]);
+    fetchProductsWithoutSales();
+  }, [selectedYear, selectedMonth, selectedWeek, selectedDay, filterType]);
+
+  const fetchProductsWithoutSales = async () => {
+    try {
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          product_code,
+          sales:sales(sale_date)
+        `)
+        .order('product_code', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching products without sales:', error);
+        return;
+      }
+
+      const productsWithoutRecentSales = products?.filter(product => {
+        if (!product.sales || product.sales.length === 0) {
+          return true; // Produto nunca vendido
+        }
+        
+        const lastSaleDate = new Date(Math.max(...product.sales.map((sale: any) => new Date(sale.sale_date).getTime())));
+        const daysSinceLastSale = Math.floor((Date.now() - lastSaleDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return daysSinceLastSale >= 30;
+      }).map(product => {
+        const lastSaleDate = product.sales && product.sales.length > 0 
+          ? new Date(Math.max(...product.sales.map((sale: any) => new Date(sale.sale_date).getTime())))
+          : null;
+        
+        const daysSinceLastSale = lastSaleDate 
+          ? Math.floor((Date.now() - lastSaleDate.getTime()) / (1000 * 60 * 60 * 24))
+          : Infinity;
+
+        return {
+          id: product.id,
+          name: product.name,
+          product_code: product.product_code,
+          last_sale_date: lastSaleDate?.toISOString() || null,
+          days_without_sales: daysSinceLastSale
+        };
+      });
+
+      setProductsWithoutSales(productsWithoutRecentSales || []);
+    } catch (error) {
+      console.error('Error fetching products without sales:', error);
+    }
+  };
 
   const fetchSalesData = async () => {
     try {
@@ -58,19 +125,30 @@ const Reports = () => {
       let startDate = FILTER_START_DATE;
       let endDate = `${selectedYear}-12-31`;
       
-      // Aplicar filtro de mês se selecionado
-      if (selectedMonth !== 'all') {
+      // Aplicar filtros baseado no tipo selecionado
+      if (filterType === 'month' && selectedMonth !== 'all') {
         const month = selectedMonth.padStart(2, '0');
         startDate = `${selectedYear}-${month}-01`;
-        
-        // Calcular último dia do mês
         const lastDay = new Date(parseInt(selectedYear), parseInt(month), 0).getDate();
         endDate = `${selectedYear}-${month}-${lastDay}`;
+      } else if (filterType === 'week' && selectedWeek !== 'all') {
+        // Calcular início e fim da semana
+        const weekNumber = parseInt(selectedWeek);
+        const firstDayOfYear = new Date(parseInt(selectedYear), 0, 1);
+        const daysOffset = (weekNumber - 1) * 7;
+        const weekStart = new Date(firstDayOfYear.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+        const weekEnd = new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
         
-        // Garantir que não seja anterior à data de início fixa
-        if (startDate < FILTER_START_DATE) {
-          startDate = FILTER_START_DATE;
-        }
+        startDate = weekStart.toISOString().split('T')[0];
+        endDate = weekEnd.toISOString().split('T')[0];
+      } else if (filterType === 'day' && selectedDay !== 'all') {
+        startDate = selectedDay;
+        endDate = selectedDay;
+      }
+      
+      // Garantir que não seja anterior à data de início fixa
+      if (startDate < FILTER_START_DATE) {
+        startDate = FILTER_START_DATE;
       }
 
       console.log('Fetching sales data from:', startDate, 'to:', endDate);
@@ -184,6 +262,10 @@ const Reports = () => {
     await signOut();
   };
 
+  const handleCreatePromotion = () => {
+    navigate('/promotions');
+  };
+
   const formatDateRange = () => {
     const startDate = new Date(FILTER_START_DATE);
     const endDate = new Date(`${selectedYear}-12-31`);
@@ -196,17 +278,18 @@ const Reports = () => {
       });
     };
 
-    if (selectedMonth !== 'all') {
+    if (filterType === 'month' && selectedMonth !== 'all') {
       const month = selectedMonth.padStart(2, '0');
       const monthStart = new Date(parseInt(selectedYear), parseInt(month) - 1, 1);
       const monthEnd = new Date(parseInt(selectedYear), parseInt(month), 0);
       
-      // Se o mês selecionado é anterior a junho/2025, mostrar a partir de junho
       if (monthStart < startDate) {
         return `${formatDate(startDate)} - ${formatDate(monthEnd)}`;
       }
       
       return `${formatDate(monthStart)} - ${formatDate(monthEnd)}`;
+    } else if (filterType === 'day' && selectedDay !== 'all') {
+      return formatDate(new Date(selectedDay));
     }
     
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
@@ -235,6 +318,36 @@ const Reports = () => {
     { value: '12', label: 'Dezembro' },
   ];
 
+  const weeks = [
+    { value: 'all', label: 'Todas as semanas' },
+    ...Array.from({ length: 52 }, (_, i) => ({
+      value: String(i + 1),
+      label: `Semana ${i + 1}`
+    }))
+  ];
+
+  const generateDaysForCurrentMonth = () => {
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    const days = [{ value: 'all', label: 'Todos os dias' }];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dateObj = new Date(year, month, day);
+      const dayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' });
+      
+      days.push({
+        value: dateStr,
+        label: `${day} (${dayName})`
+      });
+    }
+    
+    return days;
+  };
+
   if (isMobile) {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -249,6 +362,17 @@ const Reports = () => {
             </div>
             
             <div className="flex items-center space-x-4">
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Filtro" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="month">Mês</SelectItem>
+                  <SelectItem value="week">Semana</SelectItem>
+                  <SelectItem value="day">Dia</SelectItem>
+                </SelectContent>
+              </Select>
+              
               <Select value={selectedYear} onValueChange={setSelectedYear}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="Ano" />
@@ -262,25 +386,118 @@ const Reports = () => {
                 </SelectContent>
               </Select>
               
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Selecionar mês" />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
+              {filterType === 'month' && (
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Selecionar mês" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((month) => (
+                      <SelectItem key={month.value} value={month.value}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              {filterType === 'week' && (
+                <Select value={selectedWeek} onValueChange={setSelectedWeek}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Selecionar semana" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {weeks.map((week) => (
+                      <SelectItem key={week.value} value={week.value}>
+                        {week.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              {filterType === 'day' && (
+                <Select value={selectedDay} onValueChange={setSelectedDay}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Selecionar dia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {generateDaysForCurrentMonth().map((day) => (
+                      <SelectItem key={day.value} value={day.value}>
+                        {day.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
               <Button onClick={handleExportToExcel} variant="outline">
                 <Download className="h-4 w-4 mr-2" />
                 Exportar Excel
               </Button>
             </div>
           </div>
+
+          {/* Alert for products without sales */}
+          {productsWithoutSales.length > 0 && (
+            <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2 text-orange-800">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span>Produtos sem vendas há mais de 1 mês</span>
+                </CardTitle>
+                <CardDescription className="text-orange-700">
+                  {productsWithoutSales.length} produto(s) precisam de atenção
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {productsWithoutSales.slice(0, 3).map((product) => (
+                    <AlertDialog key={product.id}>
+                      <AlertDialogTrigger asChild>
+                        <div className="p-3 bg-white rounded-lg border border-orange-200 cursor-pointer hover:bg-orange-50 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded">
+                                {product.product_code}
+                              </span>
+                              <p className="font-medium text-orange-900 mt-1">{product.name}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-orange-700">
+                                {product.days_without_sales === Infinity ? 'Nunca vendido' : `${product.days_without_sales} dias`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Produto sem vendas detectado</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            O produto <strong>{product.name}</strong> ({product.product_code}) está há {product.days_without_sales === Infinity ? 'muito tempo' : `${product.days_without_sales} dias`} sem vendas.
+                            <br /><br />
+                            Deseja criar uma promoção para este produto?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Não</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleCreatePromotion}>
+                            Sim, criar promoção
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ))}
+                </div>
+                {productsWithoutSales.length > 3 && (
+                  <p className="text-sm text-orange-600 mt-2">
+                    E mais {productsWithoutSales.length - 3} produto(s)...
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Cards de Estatísticas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -433,6 +650,17 @@ const Reports = () => {
       <main className="container mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Filtro" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="month">Mês</SelectItem>
+                <SelectItem value="week">Semana</SelectItem>
+                <SelectItem value="day">Dia</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Ano" />
@@ -446,18 +674,50 @@ const Reports = () => {
               </SelectContent>
             </Select>
             
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Selecionar mês" />
-              </SelectTrigger>
-              <SelectContent>
-                {months.map((month) => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {filterType === 'month' && (
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecionar mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {filterType === 'week' && (
+              <Select value={selectedWeek} onValueChange={setSelectedWeek}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecionar semana" />
+                </SelectTrigger>
+                <SelectContent>
+                  {weeks.map((week) => (
+                    <SelectItem key={week.value} value={week.value}>
+                      {week.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {filterType === 'day' && (
+              <Select value={selectedDay} onValueChange={setSelectedDay}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecionar dia" />
+                </SelectTrigger>
+                <SelectContent>
+                  {generateDaysForCurrentMonth().map((day) => (
+                    <SelectItem key={day.value} value={day.value}>
+                      {day.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             <Button onClick={handleExportToExcel} variant="outline">
               <Download className="h-4 w-4 mr-2" />
