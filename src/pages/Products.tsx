@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Package, Plus, Search, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Package, Plus, Search, TrendingUp, TrendingDown, AlertTriangle, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AddProductDialog } from '@/components/products/AddProductDialog';
 import { EditProductDialog } from '@/components/products/EditProductDialog';
@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileHeader } from '@/components/mobile/MobileHeader';
 import { useSupabase } from '@/hooks/useSupabase';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Product {
   id: string;
@@ -33,6 +34,11 @@ interface Product {
   categories: {
     name: string;
   };
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 interface StockMovement {
@@ -63,6 +69,7 @@ interface InventoryStats {
 const Products = () => {
   const { user, signOut } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [stats, setStats] = useState<InventoryStats>({
     totalItems: 0,
@@ -71,6 +78,8 @@ const Products = () => {
     outOfStock: 0,
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [stockFilter, setStockFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [replenishDialogOpen, setReplenishDialogOpen] = useState(false);
@@ -84,8 +93,27 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
     fetchMovements();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching categories:', error);
+        return;
+      }
+
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -98,7 +126,7 @@ const Products = () => {
             name
           )
         `)
-        .order('name');
+        .order('product_code'); // Ordenar por código crescente por padrão
 
       if (error) {
         console.error('Error fetching products:', error);
@@ -208,6 +236,7 @@ const Products = () => {
 
   const handleProductAdded = () => {
     fetchProducts();
+    fetchCategories();
     fetchMovements();
     console.log('Produto adicionado com sucesso!');
   };
@@ -226,6 +255,7 @@ const Products = () => {
 
   const handleCategoryAdded = () => {
     fetchProducts();
+    fetchCategories();
     console.log('Categoria adicionada com sucesso!');
   };
 
@@ -241,10 +271,23 @@ const Products = () => {
     setSelectedProduct(null);
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.product_code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrar produtos com base nos filtros aplicados
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.product_code.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
+    
+    const matchesStock = (() => {
+      if (stockFilter === 'all') return true;
+      if (stockFilter === 'in_stock') return product.stock_quantity > product.minimum_stock;
+      if (stockFilter === 'low_stock') return product.stock_quantity > 0 && product.stock_quantity <= product.minimum_stock;
+      if (stockFilter === 'out_of_stock') return product.stock_quantity === 0;
+      return true;
+    })();
+
+    return matchesSearch && matchesCategory && matchesStock;
+  });
 
   const getStockBadge = (current: number, minimum: number) => {
     if (current === 0) {
@@ -281,6 +324,65 @@ const Products = () => {
       minute: '2-digit'
     });
   };
+
+  // Componente de Loading elegante e moderno
+  const LoadingSkeleton = () => (
+    <Card className="bg-white border-slate-200 shadow-sm">
+      <CardHeader>
+        <div className="flex items-center space-x-3">
+          <Skeleton className="h-12 w-12 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {/* Skeleton para filtros */}
+          <div className="flex space-x-4">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+          
+          {/* Skeleton para tabela */}
+          <div className="space-y-3">
+            <div className="flex space-x-4 py-4 border-b">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex space-x-4 py-3 animate-pulse">
+                <Skeleton className="h-8 w-16" />
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <div className="space-y-1">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-6 w-20" />
+                <div className="flex space-x-2">
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-8 w-8" />
+                  <Skeleton className="h-8 w-8" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (isMobile) {
     return (
@@ -351,114 +453,163 @@ const Products = () => {
                   <AddCategoryDialog onCategoryAdded={handleCategoryAdded} />
                 </div>
                 
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome ou código..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8"
-                  />
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por nome ou código..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas Categorias</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={stockFilter} onValueChange={setStockFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Estoque" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="in_stock">Em Estoque</SelectItem>
+                        <SelectItem value="low_stock">Estoque Baixo</SelectItem>
+                        <SelectItem value="out_of_stock">Sem Estoque</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
               {/* Lista de Produtos Mobile */}
-              <Card className="bg-white border-slate-200 shadow-sm">
-                <CardContent className="p-4">
-                  {loading ? (
-                    <div className="text-center py-8">Carregando produtos...</div>
-                  ) : filteredProducts.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                        <Package className="h-8 w-8 text-slate-500" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        Nenhum produto encontrado
-                      </h3>
-                      <p className="text-gray-500 max-w-sm mx-auto mb-4">
-                        {searchTerm ? 'Tente ajustar os filtros de busca' : 'Comece adicionando produtos ao estoque'}
-                      </p>
-                      {!searchTerm && (
-                        <AddProductDialog 
-                          onProductAdded={handleProductAdded}
-                          trigger={
-                            <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-                              <Plus className="h-4 w-4 mr-2" />
-                              Adicionar Primeiro Produto
-                            </Button>
-                          }
-                        />
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {filteredProducts.map((product) => (
-                        <div key={product.id} className="border rounded-lg p-4 space-y-3">
-                          <div className="flex items-start space-x-3">
-                            {product.image_url && (
-                              <img 
-                                src={product.image_url} 
-                                alt={product.name}
-                                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-                              />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
-                              <p className="text-sm text-gray-500">{product.categories?.name}</p>
-                              {product.description && (
-                                <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                                  {product.description}
-                                </p>
-                              )}
-                            </div>
+              {loading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="bg-white border-slate-200 shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex items-start space-x-3 animate-pulse">
+                          <Skeleton className="w-16 h-16 rounded-lg" />
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-3 w-1/2" />
+                            <Skeleton className="h-3 w-2/3" />
                           </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="space-y-1">
-                              <p className="text-lg font-semibold text-gray-900">
-                                R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </p>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">
-                                  {product.stock_quantity} unidades
-                                </span>
-                                {getStockBadge(product.stock_quantity, product.minimum_stock)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="bg-white border-slate-200 shadow-sm">
+                  <CardContent className="p-4">
+                    {filteredProducts.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                          <Package className="h-8 w-8 text-slate-500" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          Nenhum produto encontrado
+                        </h3>
+                        <p className="text-gray-500 max-w-sm mx-auto mb-4">
+                          {searchTerm || selectedCategory !== 'all' || stockFilter !== 'all' 
+                            ? 'Tente ajustar os filtros de busca' 
+                            : 'Comece adicionando produtos ao estoque'}
+                        </p>
+                        {!searchTerm && selectedCategory === 'all' && stockFilter === 'all' && (
+                          <AddProductDialog 
+                            onProductAdded={handleProductAdded}
+                            trigger={
+                              <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar Primeiro Produto
+                              </Button>
+                            }
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {filteredProducts.map((product) => (
+                          <div key={product.id} className="border rounded-lg p-4 space-y-3">
+                            <div className="flex items-start space-x-3">
+                              {product.image_url && (
+                                <img 
+                                  src={product.image_url} 
+                                  alt={product.name}
+                                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
+                                <p className="text-sm text-gray-500">{product.categories?.name}</p>
+                                {product.description && (
+                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                    {product.description}
+                                  </p>
+                                )}
                               </div>
                             </div>
                             
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleReplenish(product)}
-                                className="flex items-center space-x-1"
-                              >
-                                <Plus className="h-3 w-3" />
-                                <span>Repor</span>
-                              </Button>
-                              <EditProductDialog 
-                                product={product} 
-                                onProductUpdated={handleProductUpdated}
-                              />
-                              <DeleteProductDialog 
-                                productId={product.id}
-                                productName={product.name}
-                                onProductDeleted={handleProductDeleted}
-                              />
+                            <div className="flex items-center justify-between">
+                              <div className="space-y-1">
+                                <p className="text-lg font-semibold text-gray-900">
+                                  R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm text-gray-600">
+                                    {product.stock_quantity} unidades
+                                  </span>
+                                  {getStockBadge(product.stock_quantity, product.minimum_stock)}
+                                </div>
+                              </div>
+                              
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleReplenish(product)}
+                                  className="flex items-center space-x-1"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                  <span>Repor</span>
+                                </Button>
+                                <EditProductDialog 
+                                  product={product} 
+                                  onProductUpdated={handleProductUpdated}
+                                />
+                                <DeleteProductDialog 
+                                  productId={product.id}
+                                  productName={product.name}
+                                  onProductDeleted={handleProductDeleted}
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="pt-2 border-t">
+                              <span className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                                {product.product_code}
+                              </span>
                             </div>
                           </div>
-                          
-                          <div className="pt-2 border-t">
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
-                              {product.product_code}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="movements" className="space-y-4">
@@ -590,155 +741,190 @@ const Products = () => {
               </Card>
             </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div className="flex space-x-3">
                 <AddProductDialog onProductAdded={handleProductAdded} />
                 <AddCategoryDialog onCategoryAdded={handleCategoryAdded} />
               </div>
               
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome ou código do produto..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 w-80"
-                />
+              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full lg:w-auto">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome ou código do produto..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-full sm:w-80"
+                  />
+                </div>
+                
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas Categorias</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={stockFilter} onValueChange={setStockFilter}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Estoque" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="in_stock">Em Estoque</SelectItem>
+                    <SelectItem value="low_stock">Estoque Baixo</SelectItem>
+                    <SelectItem value="out_of_stock">Sem Estoque</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            <Card className="bg-white border-slate-200 shadow-sm">
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <div className="p-3 bg-slate-100 rounded-xl">
-                    <Package className="h-6 w-6 text-slate-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-slate-800">Lista de Produtos</CardTitle>
-                    <CardDescription>
-                      Gerencie livros e artigos religiosos
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="text-center py-8">Carregando produtos...</div>
-                ) : filteredProducts.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                      <Package className="h-8 w-8 text-slate-500" />
+            {loading ? (
+              <LoadingSkeleton />
+            ) : (
+              <Card className="bg-white border-slate-200 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-slate-100 rounded-xl">
+                      <Package className="h-6 w-6 text-slate-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      {searchTerm ? 'Nenhum produto encontrado' : 'Nenhum produto cadastrado'}
-                    </h3>
-                    <p className="text-gray-500 max-w-sm mx-auto mb-4">
-                      {searchTerm ? 'Tente ajustar os filtros de busca' : 'Comece adicionando livros e artigos religiosos ao seu estoque'}
-                    </p>
-                    {!searchTerm && (
-                      <AddProductDialog 
-                        onProductAdded={handleProductAdded}
-                        trigger={
-                          <Button className="bg-slate-800 hover:bg-slate-900 text-white">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Adicionar Primeiro Produto
-                          </Button>
-                        }
-                      />
-                    )}
+                    <div>
+                      <CardTitle className="text-slate-800">Lista de Produtos</CardTitle>
+                      <CardDescription>
+                        Gerencie livros e artigos religiosos
+                      </CardDescription>
+                    </div>
                   </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Código</TableHead>
-                          <TableHead>Produto</TableHead>
-                          <TableHead>Categoria</TableHead>
-                          <TableHead>Preço</TableHead>
-                          <TableHead>Estoque</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredProducts.map((product) => (
-                          <TableRow key={product.id}>
-                            <TableCell>
-                              <span className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
-                                {product.product_code}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-3">
-                                {product.image_url && (
-                                  <img 
-                                    src={product.image_url} 
-                                    alt={product.name}
-                                    className="w-10 h-10 rounded-lg object-cover"
-                                  />
-                                )}
-                                <div>
-                                  <div className="font-medium">{product.name}</div>
-                                  {product.description && (
-                                    <div className="text-sm text-gray-500 truncate max-w-xs">
-                                      {product.description}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>{product.categories?.name}</TableCell>
-                            <TableCell>
-                              R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                <div className={`font-medium ${
-                                  product.stock_quantity === 0 ? 'text-red-600' :
-                                  product.stock_quantity <= product.minimum_stock ? 'text-orange-600' :
-                                  'text-green-600'
-                                }`}>
-                                  {product.stock_quantity} unidades
-                                </div>
-                                <div className="text-gray-500">
-                                  Mín: {product.minimum_stock}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {getStockBadge(product.stock_quantity, product.minimum_stock)}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex space-x-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleReplenish(product)}
-                                  className="flex items-center space-x-1"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                  <span>Repor</span>
-                                </Button>
-                                <EditProductDialog 
-                                  product={product} 
-                                  onProductUpdated={handleProductUpdated}
-                                />
-                                <DeleteProductDialog 
-                                  productId={product.id}
-                                  productName={product.name}
-                                  onProductDeleted={handleProductDeleted}
-                                />
-                              </div>
-                            </TableCell>
+                </CardHeader>
+                <CardContent>
+                  {filteredProducts.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                        <Package className="h-8 w-8 text-slate-500" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        {searchTerm || selectedCategory !== 'all' || stockFilter !== 'all' 
+                          ? 'Nenhum produto encontrado' 
+                          : 'Nenhum produto cadastrado'}
+                      </h3>
+                      <p className="text-gray-500 max-w-sm mx-auto mb-4">
+                        {searchTerm || selectedCategory !== 'all' || stockFilter !== 'all' 
+                          ? 'Tente ajustar os filtros de busca' 
+                          : 'Comece adicionando livros e artigos religiosos ao seu estoque'}
+                      </p>
+                      {!searchTerm && selectedCategory === 'all' && stockFilter === 'all' && (
+                        <AddProductDialog 
+                          onProductAdded={handleProductAdded}
+                          trigger={
+                            <Button className="bg-slate-800 hover:bg-slate-900 text-white">
+                              <Plus className="h-4 w-4 mr-2" />
+                              Adicionar Primeiro Produto
+                            </Button>
+                          }
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Código</TableHead>
+                            <TableHead>Produto</TableHead>
+                            <TableHead>Categoria</TableHead>
+                            <TableHead>Preço</TableHead>
+                            <TableHead>Estoque</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Ações</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredProducts.map((product) => (
+                            <TableRow key={product.id}>
+                              <TableCell>
+                                <span className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                                  {product.product_code}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center space-x-3">
+                                  {product.image_url && (
+                                    <img 
+                                      src={product.image_url} 
+                                      alt={product.name}
+                                      className="w-10 h-10 rounded-lg object-cover"
+                                    />
+                                  )}
+                                  <div>
+                                    <div className="font-medium">{product.name}</div>
+                                    {product.description && (
+                                      <div className="text-sm text-gray-500 truncate max-w-xs">
+                                        {product.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>{product.categories?.name}</TableCell>
+                              <TableCell>
+                                R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  <div className={`font-medium ${
+                                    product.stock_quantity === 0 ? 'text-red-600' :
+                                    product.stock_quantity <= product.minimum_stock ? 'text-orange-600' :
+                                    'text-green-600'
+                                  }`}>
+                                    {product.stock_quantity} unidades
+                                  </div>
+                                  <div className="text-gray-500">
+                                    Mín: {product.minimum_stock}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {getStockBadge(product.stock_quantity, product.minimum_stock)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex space-x-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleReplenish(product)}
+                                    className="flex items-center space-x-1"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                    <span>Repor</span>
+                                  </Button>
+                                  <EditProductDialog 
+                                    product={product} 
+                                    onProductUpdated={handleProductUpdated}
+                                  />
+                                  <DeleteProductDialog 
+                                    productId={product.id}
+                                    productName={product.name}
+                                    onProductDeleted={handleProductDeleted}
+                                  />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="movements" className="space-y-4">
