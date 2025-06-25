@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface LoadingStep {
   id: string;
   label: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
   duration: number;
   description: string;
 }
