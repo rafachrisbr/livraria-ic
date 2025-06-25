@@ -224,9 +224,9 @@ const LoadingScreen = () => {
                       }}
                     >
                       <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                        {loadingSteps[currentStep] && (
-                          <loadingSteps[currentStep].icon className="h-8 w-8 text-white" />
-                        )}
+                        {loadingSteps[currentStep] && React.createElement(loadingSteps[currentStep].icon, {
+                          className: "h-8 w-8 text-white"
+                        })}
                       </div>
                       
                       {/* Anel externo animado */}
