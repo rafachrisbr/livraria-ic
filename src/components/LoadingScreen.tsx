@@ -71,7 +71,6 @@ const LoadingScreen = () => {
   useEffect(() => {
     console.log('LoadingScreen mounted, starting dynamic loading process...');
     
-    let totalDuration = 0;
     let currentProgress = 0;
 
     const executeStep = async (stepIndex: number) => {
